@@ -1,0 +1,155 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Batchlyo - Ultimate Pinterest Automation</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%238b5cf6'/%3E%3Cpath d='M30 15 L70 15 L90 50 L70 85 L30 85 L10 50 Z' stroke='white' stroke-width='8' stroke-linejoin='round' fill='white' fill-opacity='0.15'/%3E%3Cpath d='M30 50 L70 50 M50 25 L50 75' stroke='white' stroke-width='8' stroke-linecap='round'/%3E%3Ccircle cx='50' cy='50' r='14' fill='white'/%3E%3Ccircle cx='30' cy='50' r='6' fill='white'/%3E%3Ccircle cx='70' cy='50' r='6' fill='white'/%3E%3Ccircle cx='50' cy='25' r='6' fill='white'/%3E%3Ccircle cx='50' cy='75' r='6' fill='white'/%3E%3C/svg%3E">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+            colors: {
+              main: 'var(--bg-main)',
+              panel: 'var(--bg-panel)',
+              card: 'var(--bg-card)',
+              border: 'var(--border-color)',
+              text: {
+                main: 'var(--text-main)',
+                muted: 'var(--text-muted)',
+              },
+              charcoal: {
+                950: '#0a0a0c', // Darker background
+                900: '#0f0f12',
+                800: '#15151a',
+                700: '#1e1e24',
+              },
+              accent: {
+                red: '#ff0033',
+                redHover: '#cc0029',
+                blue: '#3b82f6',
+                purple: '#8b5cf6',
+                emerald: '#10b981',
+              }
+            },
+            animation: {
+              'fade-in': 'fadeIn 0.3s ease-out',
+              'slide-up': 'slideUp 0.4s ease-out',
+            },
+            keyframes: {
+              fadeIn: {
+                '0%': { opacity: '0' },
+                '100%': { opacity: '1' },
+              },
+              slideUp: {
+                '0%': { transform: 'translateY(10px)', opacity: '0' },
+                '100%': { transform: 'translateY(0)', opacity: '1' },
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      :root {
+        /* Default Dark Mode */
+        --bg-main: #050507;
+        --bg-panel: #0f0f12;
+        --bg-card: #15151a;
+        --border-color: rgba(255, 255, 255, 0.08);
+        --text-main: #ffffff;
+        --text-muted: #9ca3af;
+        
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --glass-bg: rgba(20, 20, 25, 0.7);
+        --neon-shadow: 0 0 10px rgba(255, 255, 255, 0.05);
+      }
+
+      /* Light Mode Overrides */
+      html.light {
+        --bg-main: #f0f2f5; /* Slightly grey/off-white background */
+        --bg-panel: #ffffff;
+        --bg-card: #ffffff;
+        --border-color: rgba(0, 0, 0, 0.15); /* Darker borders for better visibility */
+        --text-main: #111827; /* Darker grey for better visibility */
+        --text-muted: #374151; /* Darker muted text for readability */
+        
+        --glass-border: rgba(0, 0, 0, 0.1);
+        --glass-bg: rgba(255, 255, 255, 0.7);
+        --neon-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        background-color: var(--bg-main);
+        color: var(--text-main);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        min-height: 100vh;
+        overflow-y: auto; /* Allow scroll */
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+
+      /* Elite Scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: var(--bg-panel); 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #333; 
+        border-radius: 3px;
+        border: 1px solid var(--bg-panel);
+      }
+      html.light ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border: 1px solid var(--bg-panel);
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #555; 
+      }
+      html.light ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+
+      /* Utilities */
+      .glass-panel {
+        background: var(--glass-bg);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--glass-border);
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+      }
+      
+      .text-gradient {
+        background: linear-gradient(to right, #fff, #9ca3af);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      /* Hide number input spinners */
+      input[type=number]::-webkit-inner-spin-button, 
+      input[type=number]::-webkit-outer-spin-button { 
+        -webkit-appearance: none; 
+        margin: 0; 
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./index.tsx"></script>
+  </body>
+</html>

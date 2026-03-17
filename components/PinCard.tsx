@@ -106,11 +106,11 @@ const PinCard: React.FC<PinCardProps> = ({ pin, onDelete, onToggleSelect, onEdit
       </div>
 
       {/* --- Content Body --- */}
-      <div className="p-2 flex flex-col gap-1 flex-1 min-h-[120px]">
+      <div className="p-3 flex flex-col gap-1.5 flex-1 h-[140px] bg-card">
         
         {/* Title */}
         <h3 
-            className="font-bold text-text-main text-[11px] leading-tight hover:text-emerald-400 cursor-pointer transition-colors line-clamp-2"
+            className="font-bold text-text-main text-[13px] leading-tight cursor-pointer transition-colors line-clamp-2"
             onClick={() => onEdit && onEdit(pin)}
             title={pin.title}
         >
@@ -118,64 +118,40 @@ const PinCard: React.FC<PinCardProps> = ({ pin, onDelete, onToggleSelect, onEdit
         </h3>
 
         {/* Description */}
-        <p className="text-[9px] text-text-muted leading-snug line-clamp-3">
-            {pin.description || "Content pending..."}
+        <p className="text-[11px] text-text-muted leading-snug line-clamp-2">
+            {pin.description || <span className="italic opacity-50">Content pending...</span>}
         </p>
 
-        {/* Footer Meta */}
-        <div className="mt-auto space-y-1">
-            
-            {/* Tags */}
-            {pin.tags && pin.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 h-3.5 overflow-hidden">
-                    {pin.tags.slice(0, 3).map(tag => (
-                        <span key={tag} className="text-[8px] text-text-muted bg-panel px-1 rounded border border-border whitespace-nowrap">
-                            #{tag.replace('#','')}
-                        </span>
-                    ))}
-                </div>
-            )}
-
-            <div className="flex items-center justify-between border-t border-border pt-1.5">
-                <div className="flex items-center gap-1.5 overflow-hidden">
-                    <Layers className={`w-3 h-3 flex-shrink-0 ${boardColorClass}`} />
-                    <span className={`text-[9px] font-bold truncate max-w-[80px] ${boardColorClass}`} title={pin.board}>
-                        {pin.board || 'Unsorted'}
-                    </span>
-                </div>
-
-                {pin.scheduledTime && (
-                    <div className="flex items-center gap-1 text-purple-400 bg-purple-500/10 px-1 py-0.5 rounded text-[9px]" title="Scheduled">
-                        <CalendarClock className="w-2.5 h-2.5" />
-                    </div>
-                )}
+        {/* Footer Data Rows */}
+        <div className="mt-auto flex flex-col gap-1.5 pt-2 border-t border-border/50">
+            <div className="flex items-center gap-1.5 min-w-0">
+                <Layers className={`w-3.5 h-3.5 flex-shrink-0 ${boardColorClass}`} />
+                <span className={`text-[11px] font-bold truncate ${boardColorClass}`} title={pin.board}>
+                    {pin.board || 'Unsorted'}
+                </span>
             </div>
             
-             {/* Link */}
-            {pin.destinationLink && (
-                <div className="flex items-center gap-1.5 bg-panel px-1.5 py-0.5 rounded border border-border group/link h-5">
-                    <LinkIcon className="w-2.5 h-2.5 text-blue-500/70" />
-                    <a 
-                        href={pin.destinationLink} 
-                        target="_blank" 
-                        rel="noreferrer" 
-                        className="text-[9px] text-blue-400/80 hover:text-blue-300 truncate flex-1 block font-medium"
-                    >
-                        {new URL(pin.destinationLink).hostname}
-                    </a>
-                    <button 
-                        onClick={handleCopyLink}
-                        className="text-text-muted hover:text-text-main opacity-0 group-hover/link:opacity-100 transition-opacity"
-                    >
-                        {copiedLink ? <Check className="w-2.5 h-2.5 text-green-500" /> : <Copy className="w-2.5 h-2.5" />}
-                    </button>
-                </div>
-            )}
+            <div className="flex items-center gap-1.5 min-w-0">
+                <LinkIcon className="w-3.5 h-3.5 text-text-muted flex-shrink-0" />
+                <a 
+                    href={pin.destinationLink || '#'} 
+                    target={pin.destinationLink ? "_blank" : "_self"}
+                    rel="noreferrer" 
+                    className="text-[11px] text-text-muted hover:text-text-main font-medium truncate"
+                    title={pin.destinationLink || 'No link added'}
+                >
+                    {pin.destinationLink ? (new URL(pin.destinationLink).hostname.replace('www.', '') || pin.destinationLink) : 'No link added'}
+                </a>
+            </div>
         </div>
-
       </div>
     </div>
   );
 };
 
-export default PinCard;
+// Prevent re-rendering during virtualization scrolling if the Pin object itself hasn't changed
+export default React.memo(PinCard, (prevProps, nextProps) => {
+  // We ignore function props because Dashboard recreates them on every render, 
+  // but they use functional state updates so the stale closure is not a concern.
+  return prevProps.pin === nextProps.pin;
+});

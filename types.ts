@@ -37,6 +37,7 @@ export interface WebhookAccount {
   id: string;
   name: string;
   url: string;
+  smartLink?: SmartLinkSettings; // Unique smart link configuration for this specific account
 }
 
 export interface ScrapeResult {

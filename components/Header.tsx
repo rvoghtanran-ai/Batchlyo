@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Cpu, Link as LinkIcon, Activity, Zap, FileText, Shield, LogOut, User, ChevronDown, Sparkles, BarChart3, Crown, Sun, Moon, Book, CreditCard, LifeBuoy, MessageSquare, Settings } from 'lucide-react';
+import { Cpu, Link as LinkIcon, Activity, Zap, FileText, Shield, LogOut, User, ChevronDown, Sparkles, BarChart3, Crown, Sun, Moon, Book, CreditCard, LifeBuoy, MessageSquare, Settings, Search, Bell } from 'lucide-react';
 import { Logo } from './Logo';
 import { AIServiceProvider, UserProfile } from '../types';
 import { User as FirebaseUser } from 'firebase/auth';
@@ -67,103 +67,64 @@ const Header: React.FC<HeaderProps> = ({ currentProvider, onReset, onOpenSetting
   };
 
   return (
-    <header className="h-16 border-b border-border bg-panel flex items-center justify-between px-6 sticky top-0 z-50 transition-colors duration-300">
+    <header className="h-20 bg-main flex items-center justify-between px-6 sticky top-0 z-50 transition-colors duration-300">
+      
+      {/* Left: Logo Area */}
       <div 
-        className="flex items-center gap-3 cursor-pointer group" 
+        className="flex items-center gap-3 cursor-pointer group w-64" 
         onClick={() => window.location.href = '/'}
       >
-        <div className="w-8 h-8 bg-accent-red rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(255,0,51,0.5)] group-hover:scale-110 transition-transform">
-          <Logo className="text-white w-5 h-5" />
+        <div className="w-8 h-8 rounded-xl flex items-center justify-center relative overflow-hidden">
+          {/* Mocking the leaf/apple logo from screenshot */}
+          <div className="absolute inset-0 bg-accent-green opacity-20"></div>
+          <Sparkles className="w-5 h-5 text-accent-green" />
         </div>
-        <h1 className="text-xl font-bold tracking-tight text-text-main group-hover:text-white transition-colors">
-          Batchlyo
+        <h1 className="text-lg font-bold text-text-main">
+          Batchlyo <span className="font-medium text-text-muted">Dashboard</span>
         </h1>
-        <a 
-          href="/blog" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="ml-2 p-1.5 text-text-muted hover:text-orange-400 transition-colors hover:bg-card rounded-lg flex items-center gap-1.5 group/blog"
-          title="Batchlyo Blog"
-        >
-          <Book className="w-4 h-4" />
-          <span className="text-[10px] font-bold uppercase tracking-wider hidden sm:block">Blog</span>
-        </a>
       </div>
 
-      {/* Stats Bar (Center) */}
-      <div className="hidden md:flex items-center gap-6 px-6 py-2 rounded-full bg-card border border-border transition-colors duration-300">
-         {/* Active Provider */}
-         <div className="flex items-center gap-2 border-r border-border pr-6">
-            <Cpu className="w-4 h-4 text-accent-purple" />
-            <div className="flex flex-col leading-none">
-               <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Provider</span>
-               <span className="text-xs font-bold text-text-main">{currentProvider}</span>
-            </div>
-         </div>
-
-         {/* Requests */}
-         <div className="flex items-center gap-2 border-r border-border pr-6">
-            <Zap className="w-4 h-4 text-yellow-500" />
-             <div className="flex flex-col leading-none">
-               <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Requests</span>
-               <span className="text-xs font-bold text-text-main">{stats.requests}</span>
-            </div>
-         </div>
-
-         {/* Latency */}
-         <div className="flex items-center gap-2">
-            <Activity className={`w-4 h-4 ${getLatencyColor(stats.lastLatency)}`} />
-             <div className="flex flex-col leading-none">
-               <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Latency</span>
-               <span className={`text-xs font-bold ${getLatencyColor(stats.lastLatency)}`}>
-                  {stats.lastLatency > 0 ? `${stats.lastLatency}ms` : '--'}
-               </span>
-            </div>
-         </div>
+      {/* Center: Search Bar */}
+      <div className="flex-1 max-w-2xl px-8">
+          <div className="flex items-center bg-panel border border-border shadow-sm rounded-xl px-4 py-2.5">
+              <Search className="w-5 h-5 text-text-main/70 mr-3" />
+              <input 
+                  type="text" 
+                  placeholder="Search keywords, boards, or pins..." 
+                  className="w-full bg-transparent border-none outline-none text-sm font-medium text-text-main placeholder:text-text-muted"
+              />
+              <button className="p-1 rounded-md hover:bg-main text-text-muted transition-colors">
+                  X
+              </button>
+          </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        {/* Theme Toggle */}
-        {onToggleTheme && (
-            <button 
-                onClick={onToggleTheme}
-                className="p-2 text-text-muted hover:text-text-main transition-colors hover:bg-card rounded-full"
-                title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            >
-                {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
-        )}
-
-        {/* Custom CSV Settings Button */}
-        <button 
-          onClick={onOpenCsvSettings}
-          className="p-2 text-text-muted hover:text-text-main transition-colors hover:bg-card rounded-full"
-          title="Custom CSV Settings"
-        >
-          <FileText className="w-5 h-5" />
-        </button>
-
-        {/* Smart Link Settings Button */}
-        <button 
-          onClick={onOpenSmartLink}
-          className="p-2 text-text-muted hover:text-text-main transition-colors hover:bg-card rounded-full"
-          title="Dynamic Smart Link Generation"
-        >
-          <LinkIcon className="w-5 h-5" />
-        </button>
-
-        {/* API Settings Button */}
-        <button 
-          onClick={onOpenSettings}
-          className="p-2 text-text-muted hover:text-text-main transition-colors hover:bg-card rounded-full"
-          title="AI Command Center"
-        >
-          <Cpu className="w-5 h-5" />
-        </button>
+      {/* Right: Credits, Notifications, Profile */}
+      <div className="flex items-center gap-6">
         
-        {user && (
-            <div className="h-6 w-[1px] bg-border mx-1"></div>
-        )}
+        {/* Credits Counter */}
+        <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-text-main">
+                Credits: <span className="font-bold">{usageCount.toLocaleString()}</span> <span className="text-text-muted">/ {plan === 'agency' ? '∞' : limit.toLocaleString()}</span>
+            </span>
+            <button 
+                onClick={() => navigate('/pricing')}
+                className="w-6 h-6 rounded-md bg-main hover:bg-border flex items-center justify-center text-text-muted transition-colors border border-border"
+            >
+                +
+            </button>
+        </div>
+
+        {/* Action Icons (Replacing the old messy settings) */}
+        <div className="flex items-center gap-2">
+            <button className="p-2 text-text-muted hover:text-text-main transition-colors relative">
+                <Bell className="w-5 h-5" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-accent-yellow rounded-full border-2 border-main"></span>
+            </button>
+        </div>
+        
+        {/* Separator */}
+        <div className="h-8 w-[1px] bg-border mx-2"></div>
 
         {/* User Profile / Dropdown */}
         {user && onLogout && (

@@ -403,7 +403,7 @@ export class AIService {
   }
 
   // --- MAIN CONTENT GENERATION ---
-  public async generateContent(pin: Pin, availableBoards: string[] = []): Promise<{ updatedPin: Pin, searchTerm: string }> {
+  public async generateContent(pin: Pin, availableBoards: string[] = [], seoKeywords: string[] = []): Promise<{ updatedPin: Pin, searchTerm: string }> {
     const startTime = Date.now();
     
     // 1. Prepare Base Data
@@ -440,6 +440,16 @@ export class AIService {
     
     ${boardInstruction}
     ${avoidanceInstruction}
+
+    ${seoKeywords.length > 0 ? `
+    SEO KEYWORD INJECTION (MANDATORY):
+    You MUST strategically work the following trending keywords into the title, description, and tags.
+    Do NOT just dump them — weave them in naturally so the content ranks for these search terms.
+    Target keywords: ${seoKeywords.join(', ')}
+    - Title: Must contain at least 1-2 of these keywords naturally
+    - Description: Must include 2-3 of these keywords in the body text, plus use them as hashtags
+    - Tags: Must include the most relevant keywords from this list
+    ` : ''}
 
     CRITICAL INSTRUCTIONS TO PREVENT REPETITION:
     - DO NOT repeat the exact same phrases, titles, or descriptions across different requests.

@@ -1,6 +1,14 @@
 
 import { Pin, CsvExportSettings, ExportFormat, ImageHostSettings, ImageHostProvider } from '../types';
 
+export const generateSmartUTM = (baseUrl: string) => {
+    if (!baseUrl || baseUrl.trim() === '') return '';
+    const cleanUrl = baseUrl.split('?utm_')[0].split('&utm_')[0].split('?ref=')[0].split('&ref=')[0];
+    const separator = cleanUrl.includes('?') ? '&' : '?';
+    const shortId = Math.random().toString(36).substring(2, 6);
+    return `${cleanUrl}${separator}utm_id=${shortId}`;
+};
+
 // Multi-proxy configuration to ensure high availability for HTML SCRAPING
 const PROXIES = [
   { 
@@ -45,8 +53,8 @@ export const resizeImageForAI = (base64Str: string): Promise<string> => {
         const img = new Image();
         img.src = base64Str;
         img.onload = () => {
-            // SMART FILTER: Reject icons and tiny junk (usually < 200px)
-            if (img.width < 200 && img.height < 200) {
+            // SMART FILTER: Reject icons and tiny junk (usually < 50px)
+            if (img.width < 50 && img.height < 50) {
                 reject(new Error("Image too small (likely an icon or thumbnail)"));
                 return;
             }
@@ -145,6 +153,44 @@ export const applyStealthFilters = (base64Str: string): Promise<string> => {
       console.warn("Stealth Mode failed to load image", e);
       resolve(base64Str); // Fallback to original
     };
+  });
+};
+
+/**
+ * CLIENT-SIDE COMPRESSION ENGINE
+ * Massively reduces memory footprint by converting high-res blob uploads into optimized WebP strings
+ * Suitable for React State and IndexedDB saving without freezing UI.
+ */
+export const compressImage = (url: string): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = url;
+    img.crossOrigin = "Anonymous";
+    img.onload = () => {
+      // 800px is plenty for grid previews and Pinterest ingestion, saves ~90% memory
+      const MAX_SIZE = 800;
+      let width = img.width;
+      let height = img.height;
+
+      if (width > MAX_SIZE) {
+        height *= MAX_SIZE / width;
+        width = MAX_SIZE;
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, width, height);
+        // WebP is incredibly memory efficient compared to standard JPEG Base64
+        resolve(canvas.toDataURL('image/webp', 0.8));
+      } else {
+        // Fallback to reading raw blob to base64 if canvas fails
+        resolve(url);
+      }
+    };
+    img.onerror = () => resolve(url);
   });
 };
 
@@ -588,11 +634,9 @@ export const scrapeImagesFromUrl = async (url: string): Promise<string[]> => {
       try {
         const absoluteUrl = new URL(rawUrl, targetUrl).href;
         
-        // Comprehensive Icon Blacklist
+        // Minimum Icon Blacklist to make scraper a monster
         const blacklist = [
-            '.svg', 'icon', 'logo', 'avatar', 'profile', 'thumb', 
-            'sprite', 'pixel', 'tracker', 'button', 'nav', 'menu', 
-            'placeholder', 'ads', 'banner', 'favicon'
+            '.svg', 'icon', 'favicon'
         ];
         
         const isBlacklisted = blacklist.some(term => absoluteUrl.toLowerCase().includes(term));
@@ -604,7 +648,7 @@ export const scrapeImagesFromUrl = async (url: string): Promise<string[]> => {
     });
 
     // Take more candidates as we expect the dimension filter to drop many
-    const topCandidates = candidates.slice(0, 40);
+    const topCandidates = candidates.slice(0, 300); // Monster scraper: grab up to 300
     const base64Promises = topCandidates.map(async (url) => {
         try {
             return await urlToBase64(url);

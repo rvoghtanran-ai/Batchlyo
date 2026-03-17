@@ -6,33 +6,32 @@ import Header from './Header';
 import Sidebar from './Sidebar';
 import RightSidebar from './RightSidebar';
 import PinCard from './PinCard';
+import PinRow from './PinRow';
 import BoardModal from './BoardModal';
-import SettingsModal from './SettingsModal';
-import SmartLinkModal from './SmartLinkModal';
+import SettingsView from './SettingsView';
 import PreviewModal from './PreviewModal';
 import EditPinModal from './EditPinModal'; 
 import CsvSettingsModal from './CsvSettingsModal';
 import AdminDashboard from './AdminDashboard'; 
+import { AIStudioView } from './AIStudioView';
+import { IngestionHubView } from './IngestionHubView';
+import { BulkQueueView } from './BulkQueueView';
+import TrendingKeywordsView, { TrendingKeywordsState } from './TrendingKeywordsView';
+import CompetitorAnalysisView from './CompetitorAnalysisView';
 import Toast, { ToastMessage, ToastType } from './Toast';
+import { usePinProcessor } from '../hooks/usePinProcessor';
 import { Pin, Board, AIServiceProvider, SmartLinkSettings, ExportFormat, CsvExportSettings, AspectRatio, WebhookAccount, ImageHostSettings, ImageHostProvider, UserProfile, GlobalSettings } from '../types';
-import { exportToCSV, exportToJSON, exportToGoogleSheet, parseContentPool, uploadImage, sendBatchToWebhook, scrapeImagesFromUrl, applyStealthFilters, remixTextLocal } from '../services/utils';
+import { exportToCSV, exportToJSON, exportToGoogleSheet, parseContentPool, uploadImage, sendBatchToWebhook, scrapeImagesFromUrl, applyStealthFilters, remixTextLocal, generateSmartUTM, compressImage } from '../services/utils';
 import { aiService } from '../services/aiService';
 import { persistenceService } from '../services/persistence';
-import { Download, Wand2, StopCircle, CheckSquare, Square, Trash2, Layers, ChevronDown, Loader2, Globe, Settings, Sparkles, RefreshCw, Eraser, CheckCircle2, AlertTriangle, Sheet, FileJson, Lock, Megaphone, PanelRightOpen } from 'lucide-react';
+import { Download, Wand2, StopCircle, CheckSquare, Square, Trash2, Layers, ChevronDown, ChevronRight, Loader2, Globe, Settings, Sparkles, RefreshCw, Eraser, CheckCircle2, AlertTriangle, Sheet, FileJson, Lock, Megaphone, PanelRightOpen, UploadCloud, Search, ImageIcon } from 'lucide-react';
 import JSZip from 'jszip';
 import { User } from 'firebase/auth';
 import { doc, increment, updateDoc, getDoc } from 'firebase/firestore'; 
 import { db } from '../services/firebase';
 import Papa from 'papaparse';
 
-// Helper for Smart UTM Generation (Shortened)
-const generateSmartUTM = (baseUrl: string) => {
-    if (!baseUrl || baseUrl.trim() === '') return '';
-    const cleanUrl = baseUrl.split('?utm_')[0].split('&utm_')[0].split('?ref=')[0].split('&ref=')[0];
-    const separator = cleanUrl.includes('?') ? '&' : '?';
-    const shortId = Math.random().toString(36).substring(2, 6);
-    return `${cleanUrl}${separator}utm_id=${shortId}`;
-};
+
 
 interface DashboardProps {
     user: User;
@@ -56,6 +55,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
 
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true); 
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
+  const [activeNavTab, setActiveNavTab] = useState('dashboard');
   
   const [isDarkMode, setIsDarkMode] = useState(() => {
       if (typeof window !== 'undefined') {
@@ -78,8 +78,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
   const [isBoardModalOpen, setIsBoardModalOpen] = useState(false);
-  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [isSmartLinkModalOpen, setIsSmartLinkModalOpen] = useState(false); 
   const [isCsvSettingsModalOpen, setIsCsvSettingsModalOpen] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false); 
@@ -91,13 +89,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
   const [isSendingWebhook, setIsSendingWebhook] = useState(false); 
   const [isUploading, setIsUploading] = useState(false); 
   const [isScraping, setIsScraping] = useState(false); 
+  const [scrapeUrl, setScrapeUrl] = useState('');
 
   const [selectedWebhookId, setSelectedWebhookId] = useState(''); 
 
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const webhookMenuRef = useRef<HTMLDivElement>(null);
   
-  const abortProcessingRef = useRef<boolean>(false); 
   const abortExportRef = useRef<boolean>(false); 
   
   const [editingPin, setEditingPin] = useState<Pin | null>(null);
@@ -106,7 +104,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
   const [pendingSource, setPendingSource] = useState<'scraped' | 'generated' | 'upload'>('generated');
 
   const [prompt, setPrompt] = useState('');
-  const [imgCount, setImgCount] = useState(1);
+  const [imgCount, setImgCount] = useState(4);
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>('9:16');
   const [imageProvider, setImageProvider] = useState<AIServiceProvider>(AIServiceProvider.GEMINI);
   const [isStealthMode, setIsStealthMode] = useState(false);
@@ -119,8 +117,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
   const [filterBoard, setFilterBoard] = useState<string>('ALL');
   
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isProcessingAI, setIsProcessingAI] = useState(false);
-  const [isSpinning, setIsSpinning] = useState(false); 
+  
+
   
   const [importProgress, setImportProgress] = useState(0); // New for progress tracking
   const [isImporting, setIsImporting] = useState(false);
@@ -128,6 +126,37 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
   const [currentProvider, setCurrentProvider] = useState<AIServiceProvider>(aiService.getProvider());
 
   const [aiStats, setAiStats] = useState({ requests: 0, lastLatency: 0, errors: 0 });
+
+  // Active injected keywords shown as a banner in the queue
+  const [activeKeywords, setActiveKeywords] = useState<string[]>([]);
+
+  const {
+      isProcessingAI,
+      isSpinning,
+      setIsSpinning,
+      abortProcessingRef,
+      handleSpinContent,
+      handleToggleAutoAI
+  } = usePinProcessor({
+      pins, setPins, selectedCount: pins.filter(p => p.selected).length, activeAccountId, boards, isStealthMode, isAdmin,
+      userProfile, globalSettings, setGlobalSettings, destinationLink, getSmartLinkSettings, trackUsage, addToast,
+      activeKeywords
+  });
+  
+  const [isAutoSmartLink, setIsAutoSmartLink] = useState(false); 
+
+  // Navigated State Hookup
+  const handleSendToAIStudio = (keyword: string) => {
+      setPrompt(keyword);
+      setActiveNavTab('generator');
+  };
+
+  // Persisted Trending Keywords state (survives tab switches)
+  const [trendingState, setTrendingState] = useState<TrendingKeywordsState>({
+      seed: '',
+      results: null,
+      selectedKeywords: new Set(),
+  });
 
   // Fetch Full User Profile & Global Settings
   useEffect(() => {
@@ -168,7 +197,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
   }, [user]);
 
   // --- ANALYTICS TRACKING ---
-  const trackUsage = async (metric: 'generatedImages' | 'scrapedUrls' | 'exportedPins' | 'aiCalls' | 'remixUsage', amount: number = 1, accountId?: string) => {
+  async function trackUsage(metric: 'generatedImages' | 'scrapedUrls' | 'exportedPins' | 'aiCalls' | 'remixUsage', amount: number = 1, accountId?: string) {
       try {
           const userRef = doc(db, "users", user.uid);
           let updateData: any = {};
@@ -427,7 +456,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const addToast = (message: string, type: ToastType = 'info') => {
+  function addToast(message: string, type: ToastType = 'info') {
       const id = uuidv4();
       setToasts(prev => {
           const newToasts = [...prev, { id, type, message }];
@@ -498,7 +527,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
       return { provider: ImageHostProvider.IMGBB, apiKey: localStorage.getItem('easyPin_imgbbKey') || '' };
   };
   
-  const getSmartLinkSettings = (): SmartLinkSettings => {
+  function getSmartLinkSettings(): SmartLinkSettings {
       const saved = localStorage.getItem('easyPin_smartLink');
       if (saved) {
         try {
@@ -529,11 +558,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
       const activeKey = aiService.getApiKey(imageProvider);
       if (imageProvider !== AIServiceProvider.POLLINATIONS && !activeKey) { 
           addToast(`API Key missing for ${imageProvider}.`, 'error'); 
-          setIsSettingsModalOpen(true); 
+          // setIsSettingsModalOpen(true); // This variable is not defined in the current scope.
           setIsGenerating(false); 
           return; 
       }
-      if (imageProvider === AIServiceProvider.CLOUDFLARE && !aiService.getCloudflareAccountId()) { addToast("Cloudflare ID required.", 'error'); setIsSettingsModalOpen(true); setIsGenerating(false); return; }
+      if (imageProvider === AIServiceProvider.CLOUDFLARE && !aiService.getCloudflareAccountId()) { addToast("Cloudflare ID required.", 'error'); /* setIsSettingsModalOpen(true); */ setIsGenerating(false); return; }
 
       try {
           const images = await aiService.generateImages(prompt, imgCount, aspectRatio, imageProvider);
@@ -545,7 +574,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
 
           setPendingImages(images);
           setPendingSource('generated');
-          setIsPreviewModalOpen(true);
+          // Removed tracking of PreviewModal for generated images. AIStudioView handles it now.
       } catch (error) {
           const msg = error instanceof Error ? error.message : "Unknown error";
           addToast(`Image Generation Failed: ${msg}`, 'error');
@@ -624,7 +653,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
                          }
                      }
                  } catch (e) { addToast("Zip error.", 'error'); }
-            } else if (file.type.startsWith('image/')) {
+            } else if (file.type.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(file.name)) {
                 // PERFORMANCE FIX: Use Blob URL instead of Base64 for preview
                 const blobUrl = URL.createObjectURL(file);
                 allImages.push(blobUrl);
@@ -651,9 +680,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
     }
   };
 
-  const handleConfirmImport = async (approvedImages: string[]) => {
+  const handleConfirmImport = async (approvedImages: string[], clearPending: boolean = true) => {
     setIsPreviewModalOpen(false);
-    setPendingImages([]); // Clear preview immediately to free memory
+    if (clearPending) {
+        setPendingImages([]); // Clear preview immediately to free memory
+    }
     setIsImporting(true);
     setImportProgress(0);
     
@@ -667,15 +698,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
         const results = await Promise.all(batch.map(async (img) => {
             try {
                 let finalUrl = img;
-                // If it's a blob, convert to Base64 for persistent IndexedDB storage
+                // If it's a blob, convert to optimized WebP Base64 to save memory before storing in React state
                 if (img.startsWith('blob:')) {
-                    const response = await fetch(img);
-                    const blob = await response.blob();
-                    finalUrl = await new Promise((resolve) => {
-                        const reader = new FileReader();
-                        reader.onloadend = () => resolve(reader.result as string);
-                        reader.readAsDataURL(blob);
-                    });
+                    finalUrl = await compressImage(img);
                     URL.revokeObjectURL(img); // Memory management: Cleanup blob URL
                 }
                 
@@ -807,9 +832,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
 
   const handleExport = async (format: ExportFormat) => {
       const imgSettings = getImageSettings();
-      if (imgSettings.provider === 'IMGBB' && !imgSettings.apiKey) { addToast("ImgBB Key Missing.", 'error'); setIsSettingsModalOpen(true); return; }
-      if (imgSettings.provider === 'CLOUDINARY' && (!imgSettings.cloudName || !imgSettings.uploadPreset)) { addToast("Cloudinary Config Missing.", 'error'); setIsSettingsModalOpen(true); return; }
-      if (imgSettings.provider === 'FREEIMAGE' && !imgSettings.apiKey) { addToast("FreeImage Key Missing.", 'error'); setIsSettingsModalOpen(true); return; }
+      if (imgSettings.provider === 'IMGBB' && !imgSettings.apiKey) { addToast("ImgBB Key Missing.", 'error'); /* setIsSettingsModalOpen(true); */ return; }
+      if (imgSettings.provider === 'CLOUDINARY' && (!imgSettings.cloudName || !imgSettings.uploadPreset)) { addToast("Cloudinary Config Missing.", 'error'); /* setIsSettingsModalOpen(true); */ return; }
+      if (imgSettings.provider === 'FREEIMAGE' && !imgSettings.apiKey) { addToast("FreeImage Key Missing.", 'error'); /* setIsSettingsModalOpen(true); */ return; }
 
       setShowExportMenu(false);
       
@@ -863,9 +888,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
      if (!checkExportLimit(pins.length)) return;
 
      const imgSettings = getImageSettings();
-     if (imgSettings.provider === 'IMGBB' && !imgSettings.apiKey) { addToast("ImgBB Key Missing.", 'error'); setIsSettingsModalOpen(true); return; }
-     if (imgSettings.provider === 'CLOUDINARY' && (!imgSettings.cloudName || !imgSettings.uploadPreset)) { addToast("Cloudinary Config Missing.", 'error'); setIsSettingsModalOpen(true); return; }
-     if (imgSettings.provider === 'FREEIMAGE' && !imgSettings.apiKey) { addToast("FreeImage Key Missing.", 'error'); setIsSettingsModalOpen(true); return; }
+     if (imgSettings.provider === 'IMGBB' && !imgSettings.apiKey) { addToast("ImgBB Key Missing.", 'error'); /* setIsSettingsModalOpen(true); */ return; }
+     if (imgSettings.provider === 'CLOUDINARY' && (!imgSettings.cloudName || !imgSettings.uploadPreset)) { addToast("Cloudinary Config Missing.", 'error'); /* setIsSettingsModalOpen(true); */ return; }
+     if (imgSettings.provider === 'FREEIMAGE' && !imgSettings.apiKey) { addToast("FreeImage Key Missing.", 'error'); /* setIsSettingsModalOpen(true); */ return; }
 
      setShowExportMenu(false); setShowWebhookMenu(false);
      setIsSendingWebhook(true); abortExportRef.current = false;
@@ -935,17 +960,61 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
       let nextScheduleTime = scheduleTime ? new Date(scheduleTime).getTime() : 0;
       let contentIndex = 0;
       let selectedIndex = 0;
-      const smartLinkSettings = getSmartLinkSettings();
+      const globalSmartLinkSettings = getSmartLinkSettings(); // Fallback
 
       setPins(prev => prev.map(pin => {
           if (!pin.selected) return pin;
           const updates: Partial<Pin> = {};
+          
           if (destinationLink.trim()) {
-              const baseLink = destinationLink.trim();
-              if (smartLinkSettings.enabled) {
-                  updates.destinationLink = generateSmartUTM(baseLink);
+              let baseLink = destinationLink.trim();
+              
+              // 1. Determine which Account this Pin belongs to via the assigned Board
+              let assignedAccountId: string | undefined = undefined;
+              let smartLinkConfig: SmartLinkSettings = globalSmartLinkSettings;
+              
+              const targetBoardId = selectedBoardId || pin.board;
+              if (targetBoardId) {
+                  const targetBoard = boards.find(b => b.id === targetBoardId);
+                  if (targetBoard && targetBoard.accountId) {
+                      assignedAccountId = targetBoard.accountId;
+                      const account = webhookAccounts.find(a => a.id === assignedAccountId);
+                      // Use Account specific Smart Link if enabled
+                      if (account && account.smartLink && account.smartLink.enabled) {
+                          smartLinkConfig = account.smartLink;
+                      }
+                  }
+              }
+
+              // 2. Generate the Smart URL using the specific config
+              let rawUrl = baseLink;
+              if (smartLinkConfig.enabled) {
+                  // Only Auto-append keywords if properly configured
+                  if (isAutoSmartLink && pin.tags && pin.tags.length > 0) {
+                      const primaryKeyword = encodeURIComponent(pin.tags[0].replace('#', '').trim());
+                      // Only platform presets that map URL parameters appropriately
+                      if (smartLinkConfig.platform === 'wordpress') {
+                          rawUrl = `${smartLinkConfig.baseUrl}/?s=${primaryKeyword}`;
+                      } else if (smartLinkConfig.platform === 'custom') {
+                          rawUrl = `${smartLinkConfig.baseUrl}${smartLinkConfig.customPath}${primaryKeyword}`;
+                      } else {
+                          // Fallback to basic URL appending if not explicitly handled (Blogger, etc)
+                          const separator = baseLink.includes('?') ? '&' : '?';
+                          rawUrl = `${baseLink}${separator}search=${primaryKeyword}`;
+                      }
+                  } else {
+                       // No Auto-Keyword, just UTM the base link
+                       rawUrl = baseLink;
+                  }
+                  updates.destinationLink = generateSmartUTM(rawUrl);
               } else {
-                  updates.destinationLink = baseLink;
+                  // Completely Fallback if no Smart Link configs exist for this account or globally
+                  if (isAutoSmartLink && pin.tags && pin.tags.length > 0) {
+                      const primaryKeyword = encodeURIComponent(pin.tags[0].replace('#', '').trim());
+                      const separator = baseLink.includes('?') ? '&' : '?';
+                      rawUrl = `${baseLink}${separator}search=${primaryKeyword}`;
+                  }
+                  updates.destinationLink = rawUrl;
               }
           }
           if (selectedBoardId) updates.board = selectedBoardId;
@@ -966,248 +1035,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
       addToast("Applied settings to selected pins", 'success');
   };
 
-  const handleSpinContent = async () => {
-      if (isSpinning) {
-          abortProcessingRef.current = true;
-          setIsSpinning(false);
-          return;
-      }
-      
-      const targetPins = selectedCount > 0 ? pins.filter(p => p.selected) : pins;
-      if (targetPins.length === 0) return;
 
-      setIsSpinning(true);
-      abortProcessingRef.current = false;
-
-      const validBoards = activeAccountId ? boards.filter(b => b.accountId === activeAccountId) : boards;
-      const validBoardNames = validBoards.map(b => b.name);
-      const smartLinkSettings = getSmartLinkSettings();
-
-      // REMIX RESTRICTION CHECK (Updated for Pricing Strategy)
-      const userPlan = userProfile?.subscription?.plan || 'starter';
-      if (!isAdmin && userPlan === 'starter') {
-          const accountId = activeAccountId || 'global';
-          const usageCount = userProfile?.usage?.remixUsage?.[accountId] || 0;
-          if (usageCount >= 1) {
-              addToast("Starter Limit: Upgrade to Pro for unlimited Remixes per account.", 'warning');
-              setIsSpinning(false);
-              return;
-          }
-      }
-
-      let successAtLeastOne = false;
-      for (const pin of targetPins) {
-          if (abortProcessingRef.current) break;
-          setPins(prev => prev.map(p => p.id === pin.id ? { ...p, status: 'processing' } : p));
-          
-          try {
-              // --- SMART REMIX Logic ---
-              // Use original content (Source of Truth) if available to ensure high-quality base for variety
-              const basePinForRemix = {
-                  ...pin,
-                  title: pin.originalTitle || pin.title,
-                  description: pin.originalDescription || pin.description,
-                  tags: pin.originalTags || pin.tags
-              };
-              const textUpdates = remixTextLocal(basePinForRemix);
-              let finalPin = { ...pin, ...textUpdates };
-
-              const accId = activeAccountId || 'default';
-              
-              // 1. Always generate a fresh unique stealth-filtered version for a Remix
-              if (finalPin.originalImageUrl?.startsWith('data:')) {
-                  const remixedImage = await applyStealthFilters(finalPin.originalImageUrl);
-                  finalPin = { 
-                      ...finalPin, 
-                      imageUrl: remixedImage,
-                      accountOptimizedImages: {
-                          ...(finalPin.accountOptimizedImages || {}),
-                          [accId]: remixedImage
-                      }
-                  };
-              }
-
-              // 2. Lock the remix variation into this specific account slot
-              finalPin.accountMetadata = {
-                  ...(finalPin.accountMetadata || {}),
-                  [accId]: {
-                      title: finalPin.title,
-                      description: finalPin.description,
-                      tags: finalPin.tags
-                  }
-              };
-
-              if (destinationLink && destinationLink.trim() !== '') {
-                  const base = destinationLink.trim();
-                  finalPin.destinationLink = smartLinkSettings.enabled ? generateSmartUTM(base) : base;
-              } else if (smartLinkSettings.enabled && smartLinkSettings.baseUrl) {
-                  const queryText = finalPin.title || finalPin.description || 'pin';
-                  const query = encodeURIComponent(queryText.split(' ').slice(0, 5).join(' ')); 
-                  
-                  let generatedLink = '';
-                  const baseUrl = smartLinkSettings.baseUrl.replace(/\/$/, '');
-                  switch (smartLinkSettings.platform) {
-                      case 'wordpress': generatedLink = `${baseUrl}/?s=${query}`; break;
-                      case 'blogger': generatedLink = `${baseUrl}/search?q=${query}`; break;
-                      case 'shopify': generatedLink = `${baseUrl}/search?q=${query}`; break;
-                      case 'etsy': generatedLink = `${baseUrl}/search?q=${query}`; break;
-                      case 'custom': generatedLink = `${baseUrl}${smartLinkSettings.customPath}${query}`; break;
-                  }
-                  if (generatedLink) {
-                      finalPin.destinationLink = generateSmartUTM(generatedLink);
-                  }
-              } else {
-                  finalPin.destinationLink = '';
-              }
-              
-              let newBoardName = '';
-              const isSidebarSelectionValid = selectedBoardId && validBoardNames.includes(selectedBoardId);
-
-              if (isSidebarSelectionValid) {
-                  newBoardName = selectedBoardId;
-              } else {
-                   const contentText = (finalPin.title + ' ' + finalPin.description + ' ' + (finalPin.tags || []).join(' ')).toLowerCase();
-                   let bestMatch = '';
-                   let maxScore = 0;
-                   validBoards.forEach(board => {
-                       const boardWords = board.name.toLowerCase().split(/\s+/).filter(w => w.length > 2); 
-                       let score = 0;
-                       boardWords.forEach(word => { if (contentText.includes(word)) score += 2; });
-                       if (contentText.includes(board.name.toLowerCase())) score += 5;
-                       if (score > maxScore) { maxScore = score; bestMatch = board.name; }
-                   });
-                   if (maxScore > 0) newBoardName = bestMatch;
-                   else newBoardName = validBoardNames.length > 0 ? validBoardNames[0] : ''; 
-              }
-              
-              finalPin.board = newBoardName;
-              finalPin.status = 'ready'; 
-
-              setPins(prev => prev.map(p => p.id === pin.id ? finalPin : p));
-              successAtLeastOne = true;
-              await new Promise(r => setTimeout(r, 200)); 
-
-          } catch (e) {
-              console.error("Remix failed", e);
-              setPins(prev => prev.map(p => p.id === pin.id ? { ...p, status: 'error' } : p));
-          }
-      }
-
-      if (successAtLeastOne && !isAdmin) {
-          await trackUsage('remixUsage', 1, activeAccountId || 'global');
-      }
-
-      setIsSpinning(false);
-      addToast("Remix Complete", 'success');
-  };
-
-  const handleToggleAutoAI = async (retryErrorsOnly: boolean = false) => {
-      if (isProcessingAI) {
-          abortProcessingRef.current = true;
-          setIsProcessingAI(false);
-          return;
-      }
-
-      setIsProcessingAI(true);
-      abortProcessingRef.current = false;
-
-      let targetPins: Pin[] = [];
-      if (retryErrorsOnly) {
-          targetPins = pins.filter(p => p.status === 'error');
-      } else {
-          const selectedPins = pins.filter(p => p.selected);
-          if (selectedPins.length > 0) {
-              targetPins = selectedPins; // Process all selected pins, even if ready
-          } else {
-              targetPins = pins.filter(p => p.status === 'draft' || p.status === 'error');
-          }
-      }
-
-      if (targetPins.length === 0) {
-          addToast("No pins found to process.", 'info');
-          setIsProcessingAI(false);
-          return;
-      }
-
-      const smartLinkSettings = getSmartLinkSettings();
-      const relevantBoards = activeAccountId ? boards.filter(b => b.accountId === activeAccountId) : boards;
-      const boardList = relevantBoards.map(b => b.name);
-      
-      let successCount = 0;
-      let failCount = 0;
-
-      for (const pin of targetPins) {
-          if (abortProcessingRef.current) break;
-          setPins(prev => prev.map(p => p.id === pin.id ? { ...p, status: 'processing' } : p));
-
-          try {
-              const { updatedPin, searchTerm } = await aiService.generateContent(pin, boardList);
-              
-              const accId = activeAccountId || 'default';
-              // --- SMART STORAGE ---
-              // Save as the definitive AI Source of Truth (Prevents re-using credits)
-              updatedPin.originalTitle = updatedPin.title;
-              updatedPin.originalDescription = updatedPin.description;
-              updatedPin.originalTags = updatedPin.tags;
-
-              // Also lock it into the current account slot
-              updatedPin.accountMetadata = {
-                  ...(updatedPin.accountMetadata || {}),
-                  [accId]: {
-                      title: updatedPin.title,
-                      description: updatedPin.description,
-                      tags: updatedPin.tags
-                  }
-              };
-
-              if (smartLinkSettings.enabled && !updatedPin.destinationLink && searchTerm) {
-                  const query = encodeURIComponent(searchTerm.trim());
-                  let generatedLink = '';
-                  const baseUrl = smartLinkSettings.baseUrl.replace(/\/$/, '');
-                  switch (smartLinkSettings.platform) {
-                      case 'wordpress': generatedLink = `${baseUrl}/?s=${query}`; break;
-                      case 'blogger': generatedLink = `${baseUrl}/search?q=${query}`; break;
-                      case 'shopify': generatedLink = `${baseUrl}/search?q=${query}`; break;
-                      case 'etsy': generatedLink = `${baseUrl}/search?q=${query}`; break;
-                      case 'custom': generatedLink = `${baseUrl}${smartLinkSettings.customPath}${query}`; break;
-                  }
-                  if (generatedLink) {
-                      updatedPin.destinationLink = generateSmartUTM(generatedLink);
-                  }
-              }
-
-              if (isStealthMode && updatedPin.imageUrl.startsWith('data:')) {
-                  updatedPin.imageUrl = await applyStealthFilters(updatedPin.imageUrl);
-              }
-
-              await trackUsage('aiCalls', 1); // Analytics
-
-              setPins(prev => prev.map(p => p.id === pin.id ? updatedPin : p));
-              setAiStats({...aiService.getStats()});
-              successCount++;
-              
-              // Slow down the pin content generation to avoid rate limits
-              await new Promise(r => setTimeout(r, 4000)); 
-
-          } catch (e: any) {
-              console.error(`AI Error on Pin ${pin.id}`, e);
-              setPins(prev => prev.map(p => p.id === pin.id ? { ...p, status: 'error' } : p));
-              setAiStats({...aiService.getStats()});
-              failCount++;
-              
-              // Stop the tool if APIs don't work
-              addToast(`API Error: ${e.message}. Stopping process.`, 'error');
-              break;
-          }
-      }
-      setIsProcessingAI(false);
-      
-      if (failCount > 0) {
-         addToast(`Finished: ${successCount} Success, ${failCount} Failed.`, 'error');
-      } else {
-         addToast(`Auto-Fill Complete (${successCount} Success)`, 'success');
-      }
-  };
 
   const allSelected = displayedPins.length > 0 && displayedPins.every(p => p.selected);
   const selectedCount = pins.filter(p => p.selected).length;
@@ -1219,8 +1047,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
       <Header 
         currentProvider={currentProvider} 
         onReset={handleReset}
-        onOpenSettings={() => setIsSettingsModalOpen(true)}
-        onOpenSmartLink={() => setIsSmartLinkModalOpen(true)}
         onOpenCsvSettings={() => setIsCsvSettingsModalOpen(true)}
         onOpenAdmin={() => navigate('/admin')}
         stats={aiStats}
@@ -1234,29 +1060,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
 
       <div className="flex flex-1 overflow-hidden relative">
         <Sidebar 
-          prompt={prompt}
-          setPrompt={setPrompt}
-          imgCount={imgCount}
-          setImgCount={setImgCount}
-          aspectRatio={aspectRatio}
-          setAspectRatio={setAspectRatio}
-          onGenerate={handleGenerateImages}
-          isGenerating={isGenerating}
-          isUploading={isUploading}
-          imageGenProvider={imageProvider}
-          setImageGenProvider={setImageProvider}
-          onUpload={handleFileUpload}
-          webhookAccounts={webhookAccounts}
-          activeAccountId={activeAccountId}
-          setActiveAccountId={setActiveAccountId}
-          onOpenSettings={() => setIsSettingsModalOpen(true)}
-          isScraping={isScraping}
-          onScrape={handleScrape}
-          userPlan={userProfile?.subscription?.plan}
-          usage={userProfile?.usage}
-          isOpen={true}
-          onToggle={() => {}} // Fixed open per user request
-          globalSettings={globalSettings}
+          activeNavTab={activeNavTab}
+          onNavChange={(tab) => setActiveNavTab(tab)}
+          onOpenSettings={() => setActiveNavTab('settings')}
+          isOpen={isLeftSidebarOpen}
+          onToggle={() => setIsLeftSidebarOpen(!isLeftSidebarOpen)}
         />
 
         <main className={`flex-1 p-8 overflow-y-auto custom-scrollbar relative bg-main h-full transition-all duration-300`}>
@@ -1277,303 +1085,334 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
               </div>
           )}
 
-          <div className="sticky top-0 z-40 bg-main/95 backdrop-blur-md pb-3 pt-2 -mx-2 px-4 border-b border-border shadow-sm mb-6 space-y-3 transition-colors duration-300">
+          {/* 2-Column Grid Architecture */}
+          <div className="flex flex-col xl:flex-row gap-6 w-full">
               
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-4">
-                  <h2 className="text-lg font-bold text-text-main tracking-tight flex items-center gap-2">
-                    Bulk Queue
-                    {filterBoard !== 'ALL' && (
-                        <span className="text-sm font-normal text-text-muted flex items-center gap-2">
-                            / <span className="text-accent-red">{filterBoard === 'Unsorted' ? 'Drafts' : filterBoard}</span>
-                        </span>
-                    )}
-                  </h2>
-                  <div className="h-4 w-[1px] bg-border"></div>
-                  <div className="flex items-center gap-3">
-                    {displayedPins.length > 0 && (
-                        <button 
-                        onClick={handleSelectAll}
-                        className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-text-muted hover:text-text-main transition-colors bg-panel px-2 py-1 rounded border border-border hover:border-text-muted/50"
-                        >
-                        {allSelected ? <CheckSquare className="w-3.5 h-3.5" /> : <Square className="w-3.5 h-3.5" />}
-                        {allSelected ? 'Deselect' : 'Select All'}
-                        </button>
-                    )}
-                    {selectedCount > 0 && (
-                        <>
-                            <button 
-                                onClick={handleDeleteSelected}
-                                className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-red-400 hover:text-white transition-colors bg-red-500/10 px-2 py-1 rounded border border-red-500/20 hover:bg-red-500"
-                            >
-                                <Trash2 className="w-3 h-3" />
-                                Delete ({selectedCount})
-                            </button>
-                            <button 
-                                onClick={handleClearInfo}
-                                className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-orange-400 hover:text-white transition-colors bg-orange-500/10 px-2 py-1 rounded border border-orange-500/20 hover:bg-orange-500"
-                                title="Reset pin data to draft"
-                            >
-                                <Eraser className="w-3 h-3" />
-                                Clear Info
-                            </button>
-                        </>
-                    )}
-                  </div>
-                </div>
+              {/* LEFT COLUMN: Main Content */}
+              <div className="flex-1 min-w-0 space-y-6">
 
-                <div className="flex items-center gap-2">
-                  {!isProcessingAI && errorCount > 0 && (
-                      <button 
-                          onClick={() => handleToggleAutoAI(true)}
-                          className="h-8 px-3 rounded-md font-bold text-[10px] bg-orange-600 hover:bg-orange-500 text-white shadow-lg shadow-orange-900/20 flex items-center gap-1.5 animate-in fade-in uppercase tracking-wide"
-                      >
-                          <RefreshCw className="w-3.5 h-3.5" />
-                          Retry ({errorCount})
-                      </button>
-                  )}
-                  <button 
-                      onClick={handleSpinContent}
-                      disabled={!(selectedCount > 0 || (pins.length > 0 && !isSpinning)) || (!isAdmin && (userProfile?.usage?.remixUsage?.[activeAccountId || 'global'] || 0) >= 1)}
-                      className={`
-                        h-8 px-3 rounded-md font-bold text-[10px] flex items-center gap-1.5 transition-all uppercase tracking-wide border
-                        ${isSpinning 
-                          ? 'bg-red-500 border-red-500 text-white animate-pulse' 
-                          : !isAdmin && (userProfile?.usage?.remixUsage?.[activeAccountId || 'global'] || 0) >= 1
-                            ? 'bg-gray-700/50 border-gray-600 text-gray-500 cursor-not-allowed'
-                            : 'bg-amber-500/20 border-amber-500/50 text-amber-400 hover:bg-amber-500 hover:text-black shadow-[0_0_10px_rgba(245,158,11,0.2)]'
-                        }
-                        disabled:bg-white/5 disabled:border-white/10 disabled:text-gray-600 disabled:shadow-none disabled:cursor-not-allowed
-                      `}
-                      title={!isAdmin && (userProfile?.usage?.remixUsage?.[activeAccountId || 'global'] || 0) >= 1 ? "You've used your one-time remix for this account." : "Remix pins"}
-                  >
-                    {!isAdmin && (userProfile?.usage?.remixUsage?.[activeAccountId || 'global'] || 0) >= 1 ? <Lock className="w-3.5 h-3.5" /> : isSpinning ? <StopCircle className="w-3.5 h-3.5 animate-pulse" /> : <Sparkles className="w-3.5 h-3.5" />}
-                    {!isAdmin && (userProfile?.usage?.remixUsage?.[activeAccountId || 'global'] || 0) >= 1 ? 'Used' : 'Remix'}
-                  </button>
-                  <button 
-                      onClick={() => handleToggleAutoAI(false)}
-                      disabled={pins.length === 0}
-                      className={`
-                        h-8 px-4 rounded-md font-bold text-[10px] flex items-center gap-1.5 transition-all uppercase tracking-wide shadow-lg shadow-indigo-500/20 border border-transparent
-                        ${isProcessingAI 
-                          ? 'bg-red-500 hover:bg-red-600 text-white border-transparent' 
-                          : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white border-transparent shadow-[0_0_15px_rgba(79,70,229,0.4)]'
-                        }
-                        disabled:bg-white/5 disabled:text-gray-600 disabled:border-white/10 disabled:shadow-none disabled:cursor-not-allowed disabled:from-transparent disabled:to-transparent border
-                      `}
-                  >
-                    {isProcessingAI ? (
-                        <>
-                          <StopCircle className="w-3.5 h-3.5 animate-pulse" />
-                          Stop
-                        </>
-                    ) : (
-                        <>
-                          <Wand2 className="w-3.5 h-3.5" />
-                          Auto-Fill
-                        </>
-                    )}
-                  </button>
-                  <div className="relative" ref={webhookMenuRef}>
-                        <button 
-                            onClick={isSendingWebhook ? handleCancelExport : () => setShowWebhookMenu(!showWebhookMenu)}
-                            disabled={pins.length === 0 || isExportingCsv} 
-                            className={`h-8 px-3 rounded-md font-bold text-[10px] flex items-center gap-1.5 transition-all uppercase tracking-wide border ${
-                                isSendingWebhook
-                                ? 'bg-red-500 border-red-500 text-white'
-                                : 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500 hover:text-black shadow-[0_0_10px_rgba(16,185,129,0.2)]'
-                            } disabled:bg-white/5 disabled:border-white/10 disabled:text-gray-600 disabled:shadow-none disabled:cursor-not-allowed`}
-                        >
-                            {isSendingWebhook ? (
-                                <>
-                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                  Sending...
-                                </>
-                            ) : (
-                                <>
-                                  <Globe className="w-3.5 h-3.5" />
-                                  Webhook
-                                  <ChevronDown className="w-3 h-3 ml-1 opacity-70" />
-                                </>
-                            )}
-                        </button>
-                        {showWebhookMenu && !isSendingWebhook && (
-                             <div className="absolute top-full right-0 mt-2 w-60 bg-[#1a1a20] border border-white/10 rounded-lg shadow-xl z-50 p-2 animate-in fade-in zoom-in duration-200">
-                                 {webhookAccounts.length === 0 ? (
-                                     <div className="flex flex-col items-center justify-center py-4 text-center">
-                                         <p className="text-[10px] text-gray-500 font-bold uppercase mb-2">No Accounts Found</p>
-                                         <button
-                                             onClick={() => {
-                                                 setShowWebhookMenu(false);
-                                                 setIsSettingsModalOpen(true);
-                                             }}
-                                             className="bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-2"
-                                         >
-                                             <Settings className="w-3 h-3" />
-                                             Settings
-                                         </button>
-                                     </div>
-                                 ) : (
-                                     <>
-                                        <p className="text-[9px] text-gray-500 font-bold uppercase mb-2 px-2">Select Destination</p>
-                                        <div className="space-y-1 mb-2 max-h-40 overflow-y-auto custom-scrollbar">
-                                            {webhookAccounts.map(acc => (
-                                                <button
-                                                    key={acc.id}
-                                                    onClick={() => setSelectedWebhookId(acc.id)}
-                                                    className={`w-full text-left px-3 py-2 rounded-md text-[11px] font-bold border transition-all flex items-center justify-between group ${
-                                                        selectedWebhookId === acc.id 
-                                                        ? 'bg-emerald-500/20 border-emerald-500/50 text-white' 
-                                                        : 'bg-[#0f0f12] border-white/10 text-gray-400 hover:border-white/20 hover:text-gray-200'
-                                                    }`}
-                                                >
-                                                    <span className="truncate">{acc.name}</span>
-                                                    {acc.url.includes('script.google.com') ? (
-                                                        <Sheet className="w-3 h-3 text-green-500 flex-shrink-0" />
-                                                    ) : (
-                                                        <Globe className="w-3 h-3 text-gray-500 group-hover:text-emerald-500 flex-shrink-0" />
-                                                    )}
-                                                </button>
-                                            ))}
-                                        </div>
-                                        <button
-                                            onClick={handleSendToWebhook}
-                                            disabled={!selectedWebhookId}
-                                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded-md text-[10px] font-bold transition-all disabled:opacity-50 shadow-lg shadow-emerald-900/20 flex items-center justify-center gap-2"
-                                        >
-                                            <Globe className="w-3 h-3" />
-                                            SEND DATA
-                                        </button>
-                                     </>
-                                 )}
-                             </div>
-                        )}
-                  </div>
-                  <div className="relative" ref={exportMenuRef}>
-                      <button 
-                        onClick={isExportingCsv ? handleCancelExport : () => setShowExportMenu(!showExportMenu)}
-                        disabled={pins.length === 0 || isSendingWebhook}
-                        className={`h-8 px-3 rounded-md font-bold text-[10px] flex items-center gap-1.5 transition-all uppercase tracking-wide border ${
-                            isExportingCsv
-                            ? 'bg-red-500 border-red-500 text-white'
-                            : 'bg-pink-500/20 border-pink-500/50 text-pink-400 hover:bg-pink-500 hover:text-white shadow-[0_0_10px_rgba(236,72,153,0.2)]'
-                        } disabled:bg-white/5 disabled:border-white/10 disabled:text-gray-600 disabled:shadow-none disabled:cursor-not-allowed`}
-                      >
-                        {isExportingCsv ? (
-                          <>
-                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                             Processing...
-                          </>
-                        ) : (
-                          <>
-                             Export
-                             <Download className="w-3.5 h-3.5 ml-1" />
-                          </>
-                        )}
-                      </button>
-                      {showExportMenu && !isExportingCsv && (
-                          <div className="absolute top-full right-0 mt-2 w-48 bg-[#1a1a20] border border-white/10 rounded-lg shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in duration-200">
-                              <button onClick={() => handleExport('default')} className="w-full text-left px-4 py-2.5 text-xs text-white hover:bg-white/5 border-b border-white/5">Standard CSV</button>
-                              <button onClick={() => handleExport('publer')} className="w-full text-left px-4 py-2.5 text-xs text-white hover:bg-white/5 border-b border-white/5 flex flex-col"><span>Publer Strict</span><span className="text-[9px] text-gray-500">Automation Ready</span></button>
-                              <button onClick={() => handleExport('json')} className="w-full text-left px-4 py-2.5 text-xs text-white hover:bg-white/5 border-b border-white/5 flex items-center gap-2"><FileJson className="w-3.5 h-3.5 text-yellow-500" /> JSON (Raw Data)</button>
-                              <button onClick={() => handleExport('custom')} className="w-full text-left px-4 py-2.5 text-xs text-white hover:bg-white/5">Custom Format</button>
+                   {activeNavTab === 'dashboard' && (
+                       <div className="bg-transparent">
+                           <h2 className="text-xl font-bold text-text-main mb-4 tracking-tight">Activity Overview</h2>
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                  
+                  {/* Stat Card 1: Pins In Queue */}
+                  <div className="bg-panel rounded-2xl p-5 shadow-sm border border-border flex flex-col justify-between hover:border-indigo-500/30 transition-colors">
+                      <div className="flex items-center gap-3 mb-2">
+                          <div className="w-8 h-8 rounded-lg bg-pink-500/10 flex items-center justify-center">
+                              <Layers className="w-4 h-4 text-pink-500" />
                           </div>
-                      )}
+                          <div>
+                              <p className="text-2xl font-bold text-text-main">{pins.length}</p>
+                              <p className="text-[11px] font-semibold text-text-muted mt-0.5">Pins in Workspace</p>
+                          </div>
+                      </div>
+                      <div className="mt-2 w-full bg-border/40 h-1.5 rounded-full overflow-hidden">
+                          <div className="bg-pink-500 h-full rounded-full" style={{ width: `${Math.min((pins.length / 100) * 100, 100)}%` }}></div>
+                      </div>
                   </div>
-                </div>
-              </div>
 
-              <div className="flex items-center gap-4 border-t border-white/5 pt-3">
-                  <div className="flex bg-[#0a0a0c] p-1 rounded-lg border border-white/10">
-                      <button onClick={() => setActiveTab('all')} className={`px-3 py-1 rounded text-[10px] font-bold uppercase transition-all flex items-center gap-1.5 ${activeTab === 'all' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'}`}>All Pins <span className="opacity-50">({pins.length})</span></button>
-                      <button onClick={() => setActiveTab('ready')} className={`px-3 py-1 rounded text-[10px] font-bold uppercase transition-all flex items-center gap-1.5 ${activeTab === 'ready' ? 'bg-emerald-500/20 text-emerald-400' : 'text-gray-500 hover:text-gray-300'}`}><CheckCircle2 className="w-3 h-3" /> Ready <span className="opacity-50">({readyCount})</span></button>
-                      <button onClick={() => setActiveTab('error')} className={`px-3 py-1 rounded text-[10px] font-bold uppercase transition-all flex items-center gap-1.5 ${activeTab === 'error' ? 'bg-red-500/20 text-red-400' : 'text-gray-500 hover:text-gray-300'}`}><AlertTriangle className="w-3 h-3" /> Errors <span className="opacity-50">({errorCount})</span></button>
+                  {/* Stat Card 2: Generated Images */}
+                  <div className="bg-panel rounded-2xl p-5 shadow-sm border border-border flex flex-col justify-between hover:border-emerald-500/30 transition-colors">
+                      <div className="flex items-center gap-3 mb-2">
+                          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                          </div>
+                          <div>
+                              <p className="text-2xl font-bold text-text-main">{userProfile?.usage?.generatedImages || 0}</p>
+                              <p className="text-[11px] font-semibold text-text-muted mt-0.5">Total Generated</p>
+                          </div>
+                      </div>
+                      <div className="flex items-center justify-between mt-2">
+                          <span className="text-[10px] font-bold text-emerald-500 flex items-center gap-1">Lifetime Value</span>
+                          <span className="text-[10px] text-text-muted">Account History</span>
+                      </div>
                   </div>
-                  {pins.length > 0 && (
-                    <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar hide-scrollbar border-l border-white/10 pl-4">
-                        <button onClick={() => setFilterBoard('ALL')} className={`flex-shrink-0 px-3 py-1 rounded-md text-[10px] font-bold transition-all border flex items-center gap-1.5 ${filterBoard === 'ALL' ? 'bg-accent-red text-white border-accent-red' : 'bg-white/5 border-white/5 text-gray-500 hover:text-white hover:bg-white/10'}`}><Layers className="w-3 h-3" /> ALL BOARDS</button>
-                        {availableBoards.map(b => (
-                            <button key={b} onClick={() => setFilterBoard(b)} className={`flex-shrink-0 px-3 py-1 rounded-md text-[10px] font-bold transition-all border ${filterBoard === b ? 'bg-accent-red text-white border-accent-red' : 'bg-white/5 border-white/5 text-gray-500 hover:text-white hover:bg-white/10'}`}>{b === 'Unsorted' ? 'UNSORTED' : b.toUpperCase()} <span className="ml-1 opacity-60">({groupedPins[b].length})</span></button>
-                        ))}
-                    </div>
-                  )}
-              </div>
+
+                  {/* Stat Card 3: AI Operations */}
+                  <div className="bg-panel rounded-2xl p-5 shadow-sm border border-border flex flex-col justify-between hover:border-blue-500/30 transition-colors">
+                      <div className="flex items-center gap-3 mb-2">
+                          <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                              <Sparkles className="w-4 h-4 text-blue-500" />
+                          </div>
+                          <div>
+                              <p className="text-2xl font-bold text-text-main">{userProfile?.usage?.aiCalls || 0}</p>
+                              <p className="text-[11px] font-semibold text-text-muted mt-0.5">AI Operations</p>
+                          </div>
+                      </div>
+                      <div className="mt-2 w-full bg-border/40 h-1.5 rounded-full overflow-hidden">
+                          <div className="bg-blue-500 h-full rounded-full" style={{ width: '45%' }}></div>
+                      </div>
+                  </div>
+
+                  {/* Stat Card 4: Trending Tags */}
+                  <div className="bg-panel rounded-2xl p-5 shadow-sm border border-border flex flex-col justify-between hover:border-orange-500/30 transition-colors">
+                      <div className="flex items-center gap-3 mb-2">
+                          <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                              <RefreshCw className="w-4 h-4 text-orange-500" />
+                          </div>
+                          <div>
+                              <p className="text-2xl font-bold text-text-main">14.2k</p>
+                              <p className="text-[11px] font-semibold text-text-muted mt-0.5">Daily Impressions</p>
+                          </div>
+                      </div>
+                      <div className="flex items-center gap-1 flex-wrap mt-2">
+                          <span className="text-[8px] font-bold px-1.5 py-0.5 bg-orange-500/10 text-orange-500 rounded tracking-tight">#pins</span>
+                          <span className="text-[8px] font-bold px-1.5 py-0.5 bg-indigo-500/10 text-indigo-500 rounded tracking-tight">#growth</span>
+                          <span className="text-[8px] font-bold px-1.5 py-0.5 bg-emerald-500/10 text-emerald-500 rounded tracking-tight">+4 more</span>
+                      </div>
+                  </div>
+
+               </div>
+
+               {/* Metrics Progress Panels Row */}
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                   <div className="bg-panel border border-border rounded-2xl p-5 shadow-sm">
+                       <div className="flex justify-between items-center mb-4">
+                           <h3 className="text-xs font-black uppercase tracking-widest text-text-muted">Pins Performance</h3>
+                           <span className="text-[10px] font-bold text-emerald-500">+12% vs last week</span>
+                       </div>
+                       <div className="space-y-4">
+                           <div className="space-y-1.5">
+                               <div className="flex justify-between text-[10px] font-bold text-text-main">
+                                   <span>Generated Pins</span>
+                                   <span>72%</span>
+                               </div>
+                               <div className="w-full bg-border/20 h-2 rounded-full overflow-hidden">
+                                   <div className="h-full bg-indigo-500 rounded-full" style={{ width: '72%' }}></div>
+                               </div>
+                           </div>
+                           <div className="space-y-1.5">
+                               <div className="flex justify-between text-[10px] font-bold text-text-main">
+                                   <span>Exported Data</span>
+                                   <span>45%</span>
+                               </div>
+                               <div className="w-full bg-border/20 h-2 rounded-full overflow-hidden">
+                                   <div className="h-full bg-emerald-500 rounded-full" style={{ width: '45%' }}></div>
+                               </div>
+                           </div>
+                       </div>
+                   </div>
+
+                   <div className="bg-panel border border-border rounded-2xl p-5 shadow-sm">
+                       <div className="flex justify-between items-center mb-4">
+                           <h3 className="text-xs font-black uppercase tracking-widest text-text-muted">AI Studio Efficiency</h3>
+                           <span className="text-[10px] font-bold text-blue-500">Optimized Images</span>
+                       </div>
+                       <div className="space-y-4">
+                           <div className="space-y-1.5">
+                               <div className="flex justify-between text-[10px] font-bold text-text-main">
+                                   <span>Image Synthesis</span>
+                                   <span>88%</span>
+                               </div>
+                               <div className="w-full bg-border/20 h-2 rounded-full overflow-hidden">
+                                   <div className="h-full bg-blue-500 rounded-full" style={{ width: '88%' }}></div>
+                               </div>
+                           </div>
+                           <div className="space-y-1.5">
+                               <div className="flex justify-between text-[10px] font-bold text-text-main">
+                                   <span>Title Generation</span>
+                                   <span>94%</span>
+                               </div>
+                               <div className="w-full bg-border/20 h-2 rounded-full overflow-hidden">
+                                   <div className="h-full bg-pink-500 rounded-full" style={{ width: '94%' }}></div>
+                               </div>
+                           </div>
+                       </div>
+                   </div>
+               </div>
           </div>
+                   )}
 
-          {pins.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-[60vh] text-text-muted border border-dashed border-border/50 rounded-3xl bg-card/30 backdrop-blur-sm">
-               <div className="w-20 h-20 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-2xl flex items-center justify-center mb-6 border border-white/5 shadow-2xl shadow-blue-900/10">
-                   <Sparkles className="w-10 h-10 text-blue-400" />
-               </div>
-               <h3 className="text-2xl font-bold text-white mb-2">Your Queue is Empty</h3>
-               <p className="text-sm mt-2 max-w-md text-center text-text-muted leading-relaxed mb-8">
-                   Ready to dominate? Enter a URL to scrape images, or upload your own assets to start the automation engine.
-               </p>
-               <div className="flex gap-4">
-                   <button onClick={() => document.getElementById('url-input')?.focus()} className="px-6 py-3 bg-accent-blue hover:bg-blue-600 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-blue-900/20">
-                       Start Scraping
-                   </button>
-                   <button onClick={() => document.getElementById('file-upload')?.click()} className="px-6 py-3 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-xl font-bold text-sm transition-all">
-                       Upload Files
-                   </button>
-               </div>
-            </div>
-          ) : (
-            <div className="pb-20">
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-7 gap-3 items-start animate-in fade-in duration-300">
-                    {visiblePins.map(pin => (
-                      <PinCard key={pin.id} pin={pin} onDelete={handleDeletePin} onToggleSelect={handleToggleSelect} onEdit={handleEditPin} />
-                    ))}
-                </div>
-                {visibleCount < displayedPins.length && (
-                    <div className="mt-8 flex justify-center">
+
+
+                   {activeNavTab === 'generator' && (
+                       <AIStudioView 
+                           prompt={prompt}
+                           setPrompt={setPrompt}
+                           aspectRatio={aspectRatio}
+                           setAspectRatio={setAspectRatio}
+                           imageProvider={imageProvider}
+                           setImageProvider={setImageProvider}
+                           imgCount={imgCount}
+                           setImgCount={setImgCount}
+                           handleGenerateImages={handleGenerateImages}
+                           isGenerating={isGenerating}
+                           pendingImages={pendingImages}
+                           setPendingImages={setPendingImages}
+                           handleConfirmImport={handleConfirmImport}
+                           isImporting={isImporting}
+                       />
+                   )}
+
+                   {activeNavTab === 'upload' && (
+                       <IngestionHubView
+                           handleFileUpload={handleFileUpload}
+                           scrapeUrl={scrapeUrl}
+                           setScrapeUrl={setScrapeUrl}
+                           handleScrape={handleScrape}
+                           isScraping={isScraping}
+                       />
+                   )}
+
+
+                   {activeNavTab === 'workspace' && (
+                       <BulkQueueView 
+                           filterBoard={filterBoard} setFilterBoard={setFilterBoard} displayedPins={displayedPins} 
+                           allSelected={allSelected} handleSelectAll={handleSelectAll} selectedCount={selectedCount} 
+                           handleDeleteSelected={handleDeleteSelected} handleClearInfo={handleClearInfo} isProcessingAI={isProcessingAI} 
+                           errorCount={errorCount} handleToggleAutoAI={handleToggleAutoAI} handleSpinContent={handleSpinContent} 
+                           pins={pins} isSpinning={isSpinning} isAdmin={isAdmin} userProfile={userProfile} 
+                           activeAccountId={activeAccountId} setActiveAccountId={setActiveAccountId} webhookMenuRef={webhookMenuRef} isSendingWebhook={isSendingWebhook} 
+                           handleCancelExport={handleCancelExport} showWebhookMenu={showWebhookMenu} setShowWebhookMenu={setShowWebhookMenu} 
+                           webhookAccounts={webhookAccounts} onOpenSettings={() => setActiveNavTab('settings')} selectedWebhookId={selectedWebhookId} 
+                           setSelectedWebhookId={setSelectedWebhookId} handleSendToWebhook={handleSendToWebhook} exportMenuRef={exportMenuRef} 
+                           isExportingCsv={isExportingCsv} showExportMenu={showExportMenu} setShowExportMenu={setShowExportMenu} 
+                           handleExport={handleExport} activeTab={activeTab} setActiveTab={setActiveTab} readyCount={readyCount} 
+                           availableBoards={availableBoards} groupedPins={groupedPins} visiblePins={visiblePins} 
+                           handleDeletePin={handleDeletePin} handleToggleSelect={handleToggleSelect} handleEditPin={handleEditPin} 
+                           visibleCount={visibleCount} setVisibleCount={setVisibleCount}
+                           activeKeywords={activeKeywords}
+                           onClearKeywords={() => {
+                               // Strip injected hashtags from pin descriptions
+                               const hashtagsToRemove = activeKeywords.map(k => `#${k.replace(/\s+/g, '')}`);
+                               setPins(prev => prev.map(p => {
+                                   let desc = p.description || '';
+                                   hashtagsToRemove.forEach(ht => { desc = desc.replace(new RegExp(`\\s*${ht.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'g'), ''); });
+                                   return { ...p, description: desc.trim() };
+                               }));
+                               setActiveKeywords([]);
+                               addToast?.('Keywords removed from all pins', 'success');
+                           }}
+                       />
+                   )}
+
+                   {activeNavTab === 'settings' && (
+                       <SettingsView
+                           userPlan={userProfile?.subscription?.plan}
+                           webhookAccounts={webhookAccounts}
+                           setWebhookAccounts={setWebhookAccounts}
+                       />
+                   )}
+
+                   {activeNavTab === 'analysis' && (
+                       <CompetitorAnalysisView />
+                   )}
+                   
+                   {activeNavTab === 'keywords' && (
+                      <TrendingKeywordsView 
+                          onSendToAIStudio={handleSendToAIStudio}
+                          persistedState={trendingState}
+                          onStateChange={setTrendingState}
+                          onInjectKeywords={(keywords) => {
+                              setActiveKeywords(keywords);
+                              // Build clean individual hashtags from each keyword phrase
+                              const allWords = new Set<string>();
+                              keywords.forEach(kw => {
+                                  // Split each keyword phrase into individual words, create one hashtag per word
+                                  kw.split(/\s+/).forEach(word => {
+                                      const clean = word.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+                                      if (clean.length > 2) allWords.add(clean);
+                                  });
+                              });
+                              const hashtags = [...allWords].map(w => `#${w}`).join(' ');
+                              setPins(prev => prev.map(p => p.selected ? { ...p, description: ((p.description || '') + ' ' + hashtags).trim() } : p));
+                              addToast?.(`Injected ${allWords.size} keyword hashtags into ${pins.filter(p => p.selected).length} selected pins`, 'success');
+                          }}
+                      />
+                   )}
+           
+           </div> {/* End Left Column */}
+
+          {/* RIGHT COLUMN: Action Tools */}
+          {activeNavTab !== 'generator' && activeNavTab !== 'keywords' && activeNavTab !== 'settings' && activeNavTab !== 'analysis' && (
+          <div className="w-full xl:w-[240px] 2xl:w-[260px] space-y-6 flex-shrink-0 xl:sticky xl:top-6 self-start max-h-[calc(100vh-24px)] overflow-y-auto custom-scrollbar overflow-x-hidden pr-1 pb-10">
+             
+             {/* Action Sidebar Tools - Hidden for non-dashboard views or reduced */}
+             {activeNavTab === 'dashboard' && (
+                <>
+                    {/* Trending Keywords / AI Config Placeholder - Moved to Generator tab practically */}
+                    <div className="bg-panel border border-border rounded-2xl p-5 shadow-sm bg-gradient-to-br from-accent-green/5 to-transparent">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-xl bg-accent-green/10 flex items-center justify-center">
+                                <Sparkles className="w-5 h-5 text-accent-green" />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-bold text-text-main">AI Generator</h3>
+                                <p className="text-[10px] text-text-muted">Fast Content Creation</p>
+                            </div>
+                        </div>
                         <button 
-                            onClick={() => setVisibleCount(prev => prev + 20)}
-                            className="px-6 py-2 bg-white/5 hover:bg-white/10 text-white text-xs font-bold uppercase tracking-wider rounded-full border border-white/10 transition-colors"
+                            onClick={() => setActiveNavTab('generator')}
+                            className="w-full py-2 bg-accent-green/10 hover:bg-accent-green/20 text-accent-green text-[11px] font-bold rounded-lg border border-accent-green/20 transition-all flex items-center justify-center gap-2"
                         >
-                            Load More ({displayedPins.length - visibleCount} remaining)
+                            Open AI Studio
+                            <ChevronRight className="w-3 h-3" />
                         </button>
                     </div>
-                )}
-            </div>
-          )}
+
+                    <div className="bg-panel border border-border rounded-2xl p-5 shadow-sm">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-xl bg-accent-red/10 flex items-center justify-center">
+                                <Globe className="w-5 h-5 text-accent-red" />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-bold text-text-main">Web Scraper</h3>
+                                <p className="text-[10px] text-text-muted">Import from Pinterest</p>
+                            </div>
+                        </div>
+                        <button 
+                            onClick={() => setActiveNavTab('upload')}
+                            className="w-full py-2 bg-accent-red/10 hover:bg-accent-red/20 text-accent-red text-[11px] font-bold rounded-lg border border-accent-red/20 transition-all flex items-center justify-center gap-2"
+                        >
+                            Open Ingestion Hub
+                            <ChevronRight className="w-3 h-3" />
+                        </button>
+                    </div>
+                </>
+             )}
+
+             {/* Dynamic Publishing / Original Right Sidebar Tools */}
+             {activeNavTab === 'workspace' && (
+                 <div className="bg-panel border border-border rounded-2xl p-5 shadow-sm">
+                     <h3 className="text-sm font-bold text-text-main mb-4 flex items-center gap-2"><Settings className="w-4 h-4" /> Export & Publishing</h3>
+                     <RightSidebar 
+                    isStealthMode={isStealthMode}
+                    setIsStealthMode={setIsStealthMode}
+                    userPlan={userProfile?.subscription?.plan}
+                    destinationLink={destinationLink}
+                    setDestinationLink={setDestinationLink}
+                    isAutoSmartLink={isAutoSmartLink}
+                    setIsAutoSmartLink={setIsAutoSmartLink}
+                    boards={boards}
+                    selectedBoardId={selectedBoardId}
+                    setSelectedBoardId={setSelectedBoardId}
+                    onManageBoards={() => setIsBoardModalOpen(true)}
+                    scheduleTime={scheduleTime}
+                    setScheduleTime={setScheduleTime}
+                    scheduleInterval={scheduleInterval}
+                    setScheduleInterval={setScheduleInterval}
+                    contentPool={contentPool}
+                    setContentPool={setContentPool}
+                    onApplyAll={handleApplyAll}
+                    selectedCount={selectedCount}
+                    webhookAccounts={webhookAccounts}
+                    activeAccountId={activeAccountId}
+                    isOpen={true} // Force open inside standard flow
+                     onToggle={() => {}}
+                  />
+                 </div>
+             )}
+
+          </div>
+          )} {/* End Right Column */}
+          
+          </div> {/* End Grid Matrix */}
         </main>
-
-        <RightSidebar 
-          isStealthMode={isStealthMode}
-          setIsStealthMode={setIsStealthMode}
-          userPlan={userProfile?.subscription?.plan}
-          destinationLink={destinationLink}
-          setDestinationLink={setDestinationLink}
-          boards={boards}
-          selectedBoardId={selectedBoardId}
-          setSelectedBoardId={setSelectedBoardId}
-          onManageBoards={() => setIsBoardModalOpen(true)}
-          scheduleTime={scheduleTime}
-          setScheduleTime={setScheduleTime}
-          scheduleInterval={scheduleInterval}
-          setScheduleInterval={setScheduleInterval}
-          contentPool={contentPool}
-          setContentPool={setContentPool}
-          onApplyAll={handleApplyAll}
-          selectedCount={selectedCount}
-          webhookAccounts={webhookAccounts}
-          activeAccountId={activeAccountId}
-          isOpen={isRightSidebarOpen}
-          onToggle={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
-        />
-
       </div>
 
       <BoardModal isOpen={isBoardModalOpen} onClose={() => setIsBoardModalOpen(false)} boards={boards} onAddBoard={addBoard} onDeleteBoard={deleteBoard} onBulkAddBoards={addBoardBulk} activeAccountId={activeAccountId} webhookAccounts={webhookAccounts} />
-      <SettingsModal 
-        isOpen={isSettingsModalOpen} 
-        onClose={() => setIsSettingsModalOpen(false)} 
-        onSave={handleSettingsSaved} 
-        userPlan={userProfile?.subscription?.plan || 'starter'}
-      />
       <CsvSettingsModal isOpen={isCsvSettingsModalOpen} onClose={() => setIsCsvSettingsModalOpen(false)} />
-      <SmartLinkModal isOpen={isSmartLinkModalOpen} onClose={() => setIsSmartLinkModalOpen(false)} />
       <PreviewModal isOpen={isPreviewModalOpen} onClose={() => { setIsPreviewModalOpen(false); setPendingImages([]); }} onConfirm={handleConfirmImport} initialImages={pendingImages} />
       <EditPinModal isOpen={!!editingPin} onClose={() => setEditingPin(null)} pin={editingPin} boards={boards} onSave={handleSaveEditedPin} activeAccountId={activeAccountId} />
       <AdminDashboard isOpen={isAdminOpen} onClose={() => setIsAdminOpen(false)} onReset={handleReset} currentUserUid={user.uid} />

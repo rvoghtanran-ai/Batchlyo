@@ -9,7 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script>
-      tailwind.config = {
+        tailwind.config = {
         darkMode: 'class',
         theme: {
           extend: {
@@ -26,17 +26,19 @@
                 muted: 'var(--text-muted)',
               },
               charcoal: {
-                950: '#0a0a0c', // Darker background
+                950: '#0a0a0c',
                 900: '#0f0f12',
                 800: '#15151a',
                 700: '#1e1e24',
               },
               accent: {
-                red: '#ff0033',
-                redHover: '#cc0029',
+                red: '#ff5c73',     /* Screenshot Exact Red */
+                redHover: '#e0495f',
+                green: '#5fb07d',   /* Screenshot Exact Green */
+                greenHover: '#4e9969',
+                yellow: '#ffb74d',  /* Screenshot Exact Yellow */
                 blue: '#3b82f6',
                 purple: '#8b5cf6',
-                emerald: '#10b981',
               }
             },
             animation: {
@@ -59,31 +61,47 @@
     </script>
     <style>
       :root {
-        /* Default Dark Mode */
-        --bg-main: #050507;
-        --bg-panel: #0f0f12;
-        --bg-card: #15151a;
-        --border-color: rgba(255, 255, 255, 0.08);
-        --text-main: #ffffff;
-        --text-muted: #9ca3af;
+        /* Softer, "Cute Pro" Dark Mode */
+        --bg-main: #0d1117;   /* Soft dark slate */
+        --bg-panel: #161b22;  /* Slightly lighter slate for panels */
+        --bg-card: #21262d;   /* Cards */
+        --border-color: rgba(255, 255, 255, 0.08); /* Soft borders */
+        --text-main: #f0f6fc; /* Bright, soft white */
+        --text-muted: #8b949e; /* Softer gray */
         
         --glass-border: rgba(255, 255, 255, 0.08);
-        --glass-bg: rgba(20, 20, 25, 0.7);
-        --neon-shadow: 0 0 10px rgba(255, 255, 255, 0.05);
+        --glass-bg: rgba(22, 27, 34, 0.7);
+        --neon-shadow: 0 4px 20px rgba(0, 0, 0, 0.4); /* Softer drop shadow */
       }
 
-      /* Light Mode Overrides */
+      /* Light Mode Overrides: 1:1 Screenshot Exact Match */
       html.light {
-        --bg-main: #f0f2f5; /* Slightly grey/off-white background */
-        --bg-panel: #ffffff;
-        --bg-card: #ffffff;
-        --border-color: rgba(0, 0, 0, 0.15); /* Darker borders for better visibility */
-        --text-main: #111827; /* Darker grey for better visibility */
-        --text-muted: #374151; /* Darker muted text for readability */
+        --bg-main: #f4f5f6; /* Very soft beige/grey blend that matches screenshot */
+        --bg-panel: #f4f5f6; /* Match main background */
+        --bg-card: #f4f5f6; /* Match main background */
+        --border-color: rgba(0, 0, 0, 0.05); /* Very subtle borders against uniform beige */
+        --text-main: #111827; /* Near black for maximum contrast */
+        --text-muted: #374151; /* Darker slate gray for better readability */
         
-        --glass-border: rgba(0, 0, 0, 0.1);
-        --glass-bg: rgba(255, 255, 255, 0.7);
-        --neon-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+        --glass-border: rgba(0, 0, 0, 0.08);
+        --glass-bg: rgba(255, 255, 255, 0.9);
+        --neon-shadow: 0 4px 20px rgba(0, 0, 0, 0.06); 
+      }
+
+      html.light body,
+      html.light input,
+      html.light textarea,
+      html.light select,
+      html.light button {
+        font-weight: 600; /* Thicker base font weight everywhere for readability */
+        color: var(--text-main);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      /* Make headings even thicker in light mode */
+      html.light h1, html.light h2, html.light h3, html.light h4, html.light h5, html.light h6 {
+         font-weight: 800;
       }
 
       html {

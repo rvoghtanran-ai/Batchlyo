@@ -270,7 +270,7 @@ export function usePinProcessor({
                         const baseUrl = smartLinkSettings.baseUrl.replace(/\/$/, '');
                         let generatedLink = '';
                         
-                        if (isAutoSmartLink) {
+                        if (isAutoSmartLink && query) {
                             switch (smartLinkSettings.platform) {
                                 case 'wordpress': generatedLink = `${baseUrl}/?s=${query}`; break;
                                 case 'blogger': 
@@ -278,6 +278,9 @@ export function usePinProcessor({
                                 case 'etsy': generatedLink = `${baseUrl}/search?q=${query}`; break;
                                 case 'custom': generatedLink = `${baseUrl}${smartLinkSettings.customPath}${query}`; break;
                             }
+                        } else {
+                            // If auto-append is off, or no query, just use the bare Smart Link Base URL
+                            generatedLink = baseUrl;
                         }
 
                         if (generatedLink) {

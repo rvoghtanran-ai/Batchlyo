@@ -61,7 +61,8 @@ interface UsePinProcessorProps {
     isAdmin: boolean;
     userProfile: UserProfile | null;
     destinationLink: string;
-    getSmartLinkSettings: () => any;
+    isAutoSmartLink: boolean;
+    getSmartLinkSettings: (accountId?: string) => any;
     trackUsage: (metric: any, amount?: number, accountId?: string) => Promise<void>;
     addToast: (msg: string, type: 'success' | 'error' | 'warning' | 'info') => void;
     setAiStats: React.Dispatch<React.SetStateAction<any>>;
@@ -70,7 +71,7 @@ interface UsePinProcessorProps {
 
 export function usePinProcessor({
     pins, setPins, selectedCount, activeAccountId, boards, isStealthMode, isAdmin,
-    userProfile, destinationLink, getSmartLinkSettings, trackUsage, addToast, setAiStats,
+    userProfile, destinationLink, isAutoSmartLink, getSmartLinkSettings, trackUsage, addToast, setAiStats,
     activeKeywords
 }: UsePinProcessorProps) {
     const [isProcessingAI, setIsProcessingAI] = useState(false);
@@ -235,7 +236,6 @@ export function usePinProcessor({
             return;
         }
 
-        const smartLinkSettings = getSmartLinkSettings();
         const relevantBoards = activeAccountId ? boards.filter(b => b.accountId === activeAccountId) : boards;
         const boardList = relevantBoards.map(b => b.name);
         
@@ -259,19 +259,44 @@ export function usePinProcessor({
                     [accId]: { title: updatedPin.title, description: updatedPin.description, tags: updatedPin.tags }
                 };
 
-                if (smartLinkSettings.enabled && !updatedPin.destinationLink && searchTerm) {
-                    const query = encodeURIComponent(searchTerm.trim());
-                    let generatedLink = '';
-                    const baseUrl = smartLinkSettings.baseUrl.replace(/\/$/, '');
-                    switch (smartLinkSettings.platform) {
-                        case 'wordpress': generatedLink = `${baseUrl}/?s=${query}`; break;
-                        case 'blogger': 
-                        case 'shopify': 
-                        case 'etsy': generatedLink = `${baseUrl}/search?q=${query}`; break;
-                        case 'custom': generatedLink = `${baseUrl}${smartLinkSettings.customPath}${query}`; break;
-                    }
-                    if (generatedLink) {
-                        updatedPin.destinationLink = generateSmartUTM(generatedLink);
+                // Determine Account-specific or Global Smart Link Settings
+                const pinAccountId = activeAccountId || (updatedPin.board ? boards.find(b => b.name === updatedPin.board)?.accountId : undefined);
+                const smartLinkSettings = getSmartLinkSettings(pinAccountId);
+                let rawUrl = (destinationLink || '').trim();
+
+                if (!updatedPin.destinationLink) {
+                    if (smartLinkSettings.enabled && smartLinkSettings.baseUrl) {
+                        const query = encodeURIComponent((searchTerm || updatedPin.title || 'pin').trim());
+                        const baseUrl = smartLinkSettings.baseUrl.replace(/\/$/, '');
+                        let generatedLink = '';
+                        
+                        if (isAutoSmartLink) {
+                            switch (smartLinkSettings.platform) {
+                                case 'wordpress': generatedLink = `${baseUrl}/?s=${query}`; break;
+                                case 'blogger': 
+                                case 'shopify': 
+                                case 'etsy': generatedLink = `${baseUrl}/search?q=${query}`; break;
+                                case 'custom': generatedLink = `${baseUrl}${smartLinkSettings.customPath}${query}`; break;
+                            }
+                        }
+
+                        if (generatedLink) {
+                            updatedPin.destinationLink = generateSmartUTM(generatedLink);
+                        } else if (rawUrl) {
+                            if (isAutoSmartLink && query) {
+                                const separator = rawUrl.includes('?') ? '&' : '?';
+                                updatedPin.destinationLink = generateSmartUTM(`${rawUrl}${separator}search=${query}`);
+                            } else {
+                                updatedPin.destinationLink = generateSmartUTM(rawUrl);
+                            }
+                        }
+                    } else if (rawUrl) {
+                        if (isAutoSmartLink && searchTerm) {
+                            const separator = rawUrl.includes('?') ? '&' : '?';
+                            updatedPin.destinationLink = `${rawUrl}${separator}search=${encodeURIComponent(searchTerm.trim())}`;
+                        } else {
+                            updatedPin.destinationLink = rawUrl;
+                        }
                     }
                 }
 

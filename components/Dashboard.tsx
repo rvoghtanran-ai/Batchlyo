@@ -130,6 +130,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
   // Active injected keywords shown as a banner in the queue
   const [activeKeywords, setActiveKeywords] = useState<string[]>([]);
 
+  const [isAutoSmartLink, setIsAutoSmartLink] = useState(false); 
+
   const {
       isProcessingAI,
       isSpinning,
@@ -139,10 +141,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
       handleToggleAutoAI
   } = usePinProcessor({
       pins, setPins, selectedCount: pins.filter(p => p.selected).length, activeAccountId, boards, isStealthMode, isAdmin,
-      userProfile, destinationLink, getSmartLinkSettings, trackUsage, addToast, setAiStats, activeKeywords
+      userProfile, destinationLink, isAutoSmartLink, getSmartLinkSettings, trackUsage, addToast, setAiStats, activeKeywords
   });
-  
-  const [isAutoSmartLink, setIsAutoSmartLink] = useState(false); 
 
   // Navigated State Hookup
   const handleSendToAIStudio = (keyword: string) => {
@@ -526,7 +526,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
       return { provider: ImageHostProvider.IMGBB, apiKey: localStorage.getItem('easyPin_imgbbKey') || '' };
   };
   
-  function getSmartLinkSettings(): SmartLinkSettings {
+  function getSmartLinkSettings(accountId?: string): SmartLinkSettings {
+      if (accountId) {
+          const acc = webhookAccounts.find(a => a.id === accountId);
+          if (acc && acc.smartLink && acc.smartLink.enabled) {
+              return acc.smartLink;
+          }
+      }
       const saved = localStorage.getItem('easyPin_smartLink');
       if (saved) {
         try {

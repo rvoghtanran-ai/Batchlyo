@@ -1,6 +1,11 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
+
+  # Map /api/ endpoint requests directly to the corresponding .php files
+  RewriteRule ^api/(.*)$ api/$1.php [L]
+
+  # SPA Routing Fallback
   RewriteRule ^index\.html$ - [L]
   RewriteCond %{REQUEST_URI} !^/api/
   RewriteCond %{REQUEST_FILENAME} !-f

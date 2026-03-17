@@ -30,7 +30,7 @@ const InfoPage: React.FC<InfoPageProps> = ({ type }) => {
                     <p>Last Updated: {new Date().toLocaleDateString()}</p>
                     <section>
                         <h3 className="text-xl font-bold text-white mb-2">1. Introduction</h3>
-                        <p>Batchlyo ("we", "our", or "us") respects your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our application.</p>
+                        <p>Pinlly ("we", "our", or "us") respects your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our application.</p>
                     </section>
                     <section>
                         <h3 className="text-xl font-bold text-white mb-2">2. Data Collection</h3>
@@ -42,7 +42,7 @@ const InfoPage: React.FC<InfoPageProps> = ({ type }) => {
                     </section>
                     <section>
                         <h3 className="text-xl font-bold text-white mb-2">4. Contact Us</h3>
-                        <p>If you have questions about this privacy policy, please contact us at support@batchlyo.com.</p>
+                        <p>If you have questions about this privacy policy, please contact us at support@pinlly.com.</p>
                     </section>
                 </div>
             )
@@ -56,19 +56,19 @@ const InfoPage: React.FC<InfoPageProps> = ({ type }) => {
                     <p>Last Updated: {new Date().toLocaleDateString()}</p>
                     <section>
                         <h3 className="text-xl font-bold text-white mb-2">1. Acceptance of Terms</h3>
-                        <p>By accessing or using Batchlyo, you agree to be bound by these Terms of Service and all applicable laws and regulations.</p>
+                        <p>By accessing or using Pinlly, you agree to be bound by these Terms of Service and all applicable laws and regulations.</p>
                     </section>
                     <section>
                         <h3 className="text-xl font-bold text-white mb-2">2. Use License</h3>
-                        <p>Permission is granted to temporarily download one copy of the materials (information or software) on Batchlyo's website for personal, non-commercial transitory viewing only.</p>
+                        <p>Permission is granted to temporarily download one copy of the materials (information or software) on Pinlly's website for personal, non-commercial transitory viewing only.</p>
                     </section>
                     <section>
                         <h3 className="text-xl font-bold text-white mb-2">3. Disclaimer</h3>
-                        <p>The materials on Batchlyo's website are provided on an 'as is' basis. Batchlyo makes no warranties, expressed or implied, and hereby disclaims and negates all other warranties including, without limitation, implied warranties or conditions of merchantability, fitness for a particular purpose, or non-infringement of intellectual property or other violation of rights.</p>
+                        <p>The materials on Pinlly's website are provided on an 'as is' basis. Pinlly makes no warranties, expressed or implied, and hereby disclaims and negates all other warranties including, without limitation, implied warranties or conditions of merchantability, fitness for a particular purpose, or non-infringement of intellectual property or other violation of rights.</p>
                     </section>
                     <section>
                         <h3 className="text-xl font-bold text-white mb-2">4. Limitations</h3>
-                        <p>In no event shall Batchlyo or its suppliers be liable for any damages (including, without limitation, damages for loss of data or profit, or due to business interruption) arising out of the use or inability to use the materials on Batchlyo's website.</p>
+                        <p>In no event shall Pinlly or its suppliers be liable for any damages (including, without limitation, damages for loss of data or profit, or due to business interruption) arising out of the use or inability to use the materials on Pinlly's website.</p>
                     </section>
                 </div>
             )
@@ -81,7 +81,7 @@ const InfoPage: React.FC<InfoPageProps> = ({ type }) => {
                 <div className="space-y-6 text-gray-300">
                     <section>
                         <h3 className="text-xl font-bold text-white mb-2">Our Mission</h3>
-                        <p>Batchlyo was built to empower creators and marketers to scale their Pinterest presence without the burnout. We believe in automation that enhances creativity, not replaces it.</p>
+                        <p>Pinlly was built to empower creators and marketers to scale their Pinterest presence without the burnout. We believe in automation that enhances creativity, not replaces it.</p>
                     </section>
                     <section>
                         <h3 className="text-xl font-bold text-white mb-2">The Team</h3>
@@ -100,8 +100,8 @@ const InfoPage: React.FC<InfoPageProps> = ({ type }) => {
                         <h3 className="text-xl font-bold text-white mb-2">Get in Touch</h3>
                         <p>Have questions, feedback, or need support? We're here to help.</p>
                         <div className="mt-4 p-6 bg-white/5 rounded-xl border border-white/10">
-                            <p className="mb-2"><strong>Email:</strong> support@batchlyo.com</p>
-                            <p className="mb-2"><strong>Twitter:</strong> @BatchlyoApp</p>
+                            <p className="mb-2"><strong>Email:</strong> support@pinlly.com</p>
+                            <p className="mb-2"><strong>Twitter:</strong> @PinllyApp</p>
                             <p><strong>Hours:</strong> Mon-Fri, 9am - 5pm EST</p>
                         </div>
                     </section>
@@ -115,9 +115,9 @@ const InfoPage: React.FC<InfoPageProps> = ({ type }) => {
           content: (
             <div className="space-y-8 text-gray-300">
               <section className="space-y-4">
-                <h3 className="text-xl font-bold text-white">The Batchlyo Workflow</h3>
+                <h3 className="text-xl font-bold text-white">The Pinlly Workflow</h3>
                 <p>
-                  Batchlyo is a **local-first** automation workstation designed for high-volume Pinterest marketing. 
+                  Pinlly is a **local-first** automation workstation designed for high-volume Pinterest marketing. 
                   Unlike traditional tools, it processes everything directly in your browser to ensure maximum privacy and speed.
                 </p>
                 <div className="bg-white/5 border border-white/10 p-5 rounded-2xl">
@@ -166,14 +166,14 @@ const InfoPage: React.FC<InfoPageProps> = ({ type }) => {
                     </div>
                     <div className="p-5 bg-white/5 rounded-2xl border border-white/5 group hover:border-purple-500/30 transition-colors">
                         <h4 className="font-bold text-white mb-2 flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-purple-500"></div> Local database full?</h4>
-                        <p className="text-sm">Batchlyo stores data in your browser. If you have thousands of high-res images, use the **Admin Dashboard** to clear old pins and free up space.</p>
+                        <p className="text-sm">Pinlly stores data in your browser. If you have thousands of high-res images, use the **Admin Dashboard** to clear old pins and free up space.</p>
                     </div>
                 </div>
               </section>
               <section className="p-6 bg-indigo-600/10 border border-indigo-500/20 rounded-2xl">
                  <h3 className="text-lg font-bold text-white mb-2 italic">Still need help?</h3>
                  <p className="text-sm mb-4">Our dedicated support team is available mon-fri for all Agency and Pro Elite members.</p>
-                 <a href="mailto:support@batchlyo.pro" className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all">
+                 <a href="mailto:support@pinlly.pro" className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all">
                     Reach out to Support
                  </a>
               </section>
@@ -212,7 +212,7 @@ const InfoPage: React.FC<InfoPageProps> = ({ type }) => {
                   <div className="w-8 h-8 bg-gradient-to-br from-accent-blue to-blue-700 rounded-lg flex items-center justify-center shadow-[0_0_20px_rgba(0,112,243,0.3)] group-hover:scale-110 transition-transform">
                       <Logo className="text-white w-5 h-5" />
                   </div>
-                  <span className="text-lg font-bold tracking-tight group-hover:text-white transition-colors">Batchlyo</span>
+                  <span className="text-lg font-bold tracking-tight group-hover:text-white transition-colors">Pinlly</span>
                </div>
            </div>
 
@@ -236,7 +236,7 @@ const InfoPage: React.FC<InfoPageProps> = ({ type }) => {
            
            {/* Footer */}
            <div className="mt-8 text-center text-xs text-gray-600 font-mono">
-               BATCHLYO • {new Date().getFullYear()} • v2.0 ELITE
+               PINLLY • {new Date().getFullYear()} • v2.0 ELITE
            </div>
        </div>
     </div>

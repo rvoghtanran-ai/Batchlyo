@@ -73,7 +73,7 @@ const BlogPage: React.FC = () => {
             <div className="w-10 h-10 bg-gradient-to-br from-violet-600 to-fuchsia-500 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg transition-all">
               <Logo className="text-white w-6 h-6" />
             </div>
-            <span className="text-2xl font-bold tracking-tight text-gray-900 group-hover:text-violet-600 transition-colors">Batchlyo</span>
+            <span className="text-2xl font-bold tracking-tight text-gray-900 group-hover:text-violet-600 transition-colors">Pinlly</span>
           </div>
           <div className="flex items-center gap-6">
             <Link to="/" className="text-[15px] font-bold text-gray-600 hover:text-violet-600 transition-colors">Home</Link>

@@ -59,7 +59,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
   
   const [isDarkMode, setIsDarkMode] = useState(() => {
       if (typeof window !== 'undefined') {
-          const savedTheme = localStorage.getItem('batchlyo_theme');
+          const savedTheme = localStorage.getItem('pinlly_theme');
           return savedTheme ? savedTheme === 'dark' : false;
       }
       return false;
@@ -68,10 +68,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
   useEffect(() => {
       if (isDarkMode) {
           document.documentElement.classList.remove('light');
-          localStorage.setItem('batchlyo_theme', 'dark');
+          localStorage.setItem('pinlly_theme', 'dark');
       } else {
           document.documentElement.classList.add('light');
-          localStorage.setItem('batchlyo_theme', 'light');
+          localStorage.setItem('pinlly_theme', 'light');
       }
   }, [isDarkMode]);
 

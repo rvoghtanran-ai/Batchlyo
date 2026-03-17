@@ -360,8 +360,8 @@ export class AIService {
                   headers: {
                       'Content-Type': 'application/json',
                       'Authorization': `Bearer ${apiKey}`,
-                      'HTTP-Referer': typeof window !== 'undefined' ? window.location.origin : 'https://batchlyo.com',
-                      'X-Title': 'Batchlyo'
+                      'HTTP-Referer': typeof window !== 'undefined' ? window.location.origin : 'https://pinlly.com',
+                      'X-Title': 'Pinlly'
                   },
                   body: JSON.stringify({
                       model: model,
@@ -693,8 +693,8 @@ export class AIService {
     };
     
     if (endpoint.includes('openrouter.ai')) {
-        headers['HTTP-Referer'] = typeof window !== 'undefined' ? window.location.origin : 'https://batchlyo.com';
-        headers['X-Title'] = 'Batchlyo';
+        headers['HTTP-Referer'] = typeof window !== 'undefined' ? window.location.origin : 'https://pinlly.com';
+        headers['X-Title'] = 'Pinlly';
     }
 
     const body: any = {
@@ -736,8 +736,8 @@ export class AIService {
     };
     
     if (endpoint.includes('openrouter.ai')) {
-        headers['HTTP-Referer'] = typeof window !== 'undefined' ? window.location.origin : 'https://batchlyo.com';
-        headers['X-Title'] = 'Batchlyo';
+        headers['HTTP-Referer'] = typeof window !== 'undefined' ? window.location.origin : 'https://pinlly.com';
+        headers['X-Title'] = 'Pinlly';
     }
 
     const body: any = {

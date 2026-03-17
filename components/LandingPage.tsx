@@ -125,7 +125,7 @@ const LandingPage: React.FC = () => {
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-500 flex items-center justify-center shadow-md">
                 <Logo className="text-white w-6 h-6" />
               </div>
-              <span className="text-2xl font-bold tracking-tight text-gray-900 group-hover:text-violet-600 transition-colors">Batchlyo</span>
+              <span className="text-2xl font-bold tracking-tight text-gray-900 group-hover:text-violet-600 transition-colors">Pinlly</span>
             </div>
             
             <div className="hidden lg:flex items-center gap-8 text-[15px] font-bold text-gray-600">
@@ -166,7 +166,7 @@ const LandingPage: React.FC = () => {
               </h1>
               
               <p className="text-[19px] text-gray-600 mb-8 leading-relaxed font-normal">
-                Stop wasting hours manually pinning. Batchlyo transforms raw URLs into hundreds of high-ranking Pinterest pins. Generate perfect CSVs or automate via Webhooks instantly.
+                Stop wasting hours manually pinning. Pinlly transforms raw URLs into hundreds of high-ranking Pinterest pins. Generate perfect CSVs or automate via Webhooks instantly.
               </p>
 
               <div className="flex flex-col sm:flex-row items-center gap-4 mb-10">
@@ -385,7 +385,7 @@ const LandingPage: React.FC = () => {
                   {/* Left Abstract Graphic */}
                   <div className="hidden md:flex justify-center flex-col order-2 md:order-1">
                       <h2 className="text-4xl lg:text-[46px] font-bold text-gray-900 leading-tight mb-6">Stop Leaving Traffic on the Table</h2>
-                      <p className="text-gray-600 text-[17px] mb-8 font-normal max-w-md">The manual way is slow and unscalable. Batchlyo powers massive workflows with agentic AI precision.</p>
+                      <p className="text-gray-600 text-[17px] mb-8 font-normal max-w-md">The manual way is slow and unscalable. Pinlly powers massive workflows with agentic AI precision.</p>
                       <button onClick={() => navigate('/dashboard')} className="self-start px-8 py-4 bg-white border border-gray-200 text-gray-900 rounded-full font-bold shadow-sm hover:shadow-md hover:-translate-y-1 transition-all">Automate Now</button>
                   </div>
 
@@ -412,10 +412,10 @@ const LandingPage: React.FC = () => {
                           </ul>
                       </div>
 
-                      {/* The Batchlyo Way */}
+                      {/* The Pinlly Way */}
                       <div className="p-8 rounded-[32px] bg-gradient-to-br from-[#1A0B2E] to-[#2d1154] relative shadow-[0_20px_50px_rgba(168,85,247,0.2)]">
                           <h3 className="text-fuchsia-400 font-bold uppercase tracking-widest text-[12px] mb-5 flex items-center gap-2">
-                              <CheckCircle2 className="w-4 h-4" /> The Batchlyo Way
+                              <CheckCircle2 className="w-4 h-4" /> The Pinlly Way
                           </h3>
                           <ul className="space-y-4 mb-8">
                               <li className="flex items-center gap-3 text-white text-[15px]">
@@ -570,10 +570,10 @@ const LandingPage: React.FC = () => {
               <h2 className="text-3xl lg:text-[40px] font-bold text-gray-900 mb-10 text-center">Frequently Asked Questions</h2>
               <div className="space-y-4">
                   {[
-                      { q: "Do I need my own API Keys?", a: "Yes. Batchlyo is a 'Bring Your Own Key' (BYOK) tool. This ensures you pay the lowest possible price directly to providers, with zero markup from us." },
+                      { q: "Do I need my own API Keys?", a: "Yes. Pinlly is a 'Bring Your Own Key' (BYOK) tool. This ensures you pay the lowest possible price directly to providers, with zero markup from us." },
                       { q: "Is this compliant with social platforms?", a: "We provide optimization tools to randomize image data and strip metadata, which helps in improving content uniqueness signals. However, automation should always be used responsibly." },
                       { q: "Can I use this for multiple accounts?", a: "Absolutely. You can create unlimited 'Active Projects' within the app to manage different clients or niches separately." },
-                      { q: "Does it post directly to my social accounts?", a: "Batchlyo focuses on GENERATION and DATA PREP. We export perfect CSVs, or you can use our Webhook feature to build custom, hands-free posters directly in n8n or Make." }
+                      { q: "Does it post directly to my social accounts?", a: "Pinlly focuses on GENERATION and DATA PREP. We export perfect CSVs, or you can use our Webhook feature to build custom, hands-free posters directly in n8n or Make." }
                   ].map((item, i) => (
                       <div key={i} className="bg-white rounded-[24px] p-8 border border-gray-100 hover:border-gray-200 shadow-[0_4px_20px_rgba(0,0,0,0.02)] transition-colors">
                           <h4 className="text-[17px] text-gray-900 font-bold mb-3">{item.q}</h4>
@@ -596,7 +596,7 @@ const LandingPage: React.FC = () => {
                 onClick={() => navigate('/dashboard')}
                 className="px-8 py-4 bg-gradient-to-r from-violet-600 to-fuchsia-500 text-white rounded-full font-bold text-[18px] hover:shadow-[0_0_50px_rgba(168,85,247,0.7)] transition-shadow hover:-translate-y-1"
               >
-                Launch Batchlyo Free
+                Launch Pinlly Free
               </button>
           </div>
       </section>
@@ -608,7 +608,7 @@ const LandingPage: React.FC = () => {
                 <div className="w-8 h-8 bg-gradient-to-br from-violet-600 to-fuchsia-500 rounded-lg flex items-center justify-center border border-white/20">
                     <Logo className="text-white w-4 h-4" />
                 </div>
-                <span className="text-[15px] font-bold text-white">Batchlyo</span>
+                <span className="text-[15px] font-bold text-white">Pinlly</span>
             </div>
             <div className="flex gap-8 text-[14px] text-purple-200/60 font-medium flex-wrap justify-center">
                 <button onClick={() => navigate('/about')} className="hover:text-white transition-colors">About Us</button>

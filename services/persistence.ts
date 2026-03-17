@@ -3,7 +3,7 @@
  * that exceed the 5MB limit of localStorage.
  */
 
-const DB_NAME = 'BatchlyoDB';
+const DB_NAME = 'PinllyDB';
 const STORE_NAME = 'pins';
 const DB_VERSION = 1;
 

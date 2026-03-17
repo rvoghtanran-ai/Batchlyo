@@ -215,7 +215,7 @@ const PricingPage: React.FC = () => {
                     <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg transform group-hover:rotate-6 transition-transform">
                         <Logo className="text-white w-5 h-5" />
                     </div>
-                    <span className="text-xl font-black italic tracking-tighter text-slate-900 uppercase">Batchlyo</span>
+                    <span className="text-xl font-black italic tracking-tighter text-slate-900 uppercase">Pinlly</span>
                  </div>
              </div>
 
@@ -396,7 +396,7 @@ const PricingPage: React.FC = () => {
                      <p className="text-slate-400 text-sm font-medium">Custom API access, white-labeling, and dedicated server pipelines.</p>
                  </div>
                  <button 
-                    onClick={() => window.location.href = "mailto:support@batchlyo.pro"} 
+                    onClick={() => window.location.href = "mailto:support@pinlly.pro"} 
                     className="px-8 py-4 bg-white text-slate-900 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-100 transition-all shadow-xl"
                  >
                      Talk to Sales
@@ -404,7 +404,7 @@ const PricingPage: React.FC = () => {
              </div>
 
              <div className="mt-16 text-center text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">
-                 © {new Date().getFullYear()} Batchlyo Engine. Secure Payments via PayPal.
+                 © {new Date().getFullYear()} Pinlly Engine. Secure Payments via PayPal.
              </div>
          </div>
       </div>

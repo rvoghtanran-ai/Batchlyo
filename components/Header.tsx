@@ -78,7 +78,7 @@ const Header: React.FC<HeaderProps> = ({ currentProvider, onReset, onOpenCsvSett
           <Sparkles className="w-5 h-5 text-accent-green" />
         </div>
         <h1 className="text-lg font-bold text-text-main">
-          Batchlyo <span className="font-medium text-text-muted">Dashboard</span>
+          Pinlly <span className="font-medium text-text-muted">Dashboard</span>
         </h1>
       </div>
 

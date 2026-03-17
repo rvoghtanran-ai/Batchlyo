@@ -68,7 +68,7 @@ const CompetitorAnalysisView: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [profiles, setProfiles] = useState<ProfileData[]>([]);
     const [savedCompetitors, setSavedCompetitors] = useState<ProfileData[]>(() => {
-        try { return JSON.parse(localStorage.getItem('batchlyo_competitors') || '[]'); } catch { return []; }
+        try { return JSON.parse(localStorage.getItem('pinlly_competitors') || '[]'); } catch { return []; }
     });
     const [copiedText, setCopiedText] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<Record<string, string>>({});
@@ -97,12 +97,12 @@ const CompetitorAnalysisView: React.FC = () => {
     const saveCompetitor = (p: ProfileData) => {
         const next = [...savedCompetitors.filter(s => s.username !== p.username), p];
         setSavedCompetitors(next);
-        localStorage.setItem('batchlyo_competitors', JSON.stringify(next));
+        localStorage.setItem('pinlly_competitors', JSON.stringify(next));
     };
     const removeSaved = (u: string) => {
         const next = savedCompetitors.filter(s => s.username !== u);
         setSavedCompetitors(next);
-        localStorage.setItem('batchlyo_competitors', JSON.stringify(next));
+        localStorage.setItem('pinlly_competitors', JSON.stringify(next));
     };
     const loadSaved = (p: ProfileData) => {
         if (profiles.length >= 3) { setError('Max 3. Remove one first.'); return; }

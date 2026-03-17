@@ -1,13 +1,14 @@
 import React from 'react';
 import { Sparkles, Wand2, Loader2, ImageIcon, Trash2, ArrowRight } from 'lucide-react';
+import { AspectRatio, AIServiceProvider } from '../types';
 
 interface AIStudioViewProps {
     prompt: string;
     setPrompt: (value: string) => void;
-    aspectRatio: string;
-    setAspectRatio: (value: string) => void;
-    imageProvider: string;
-    setImageProvider: (value: any) => void;
+    aspectRatio: AspectRatio;
+    setAspectRatio: React.Dispatch<React.SetStateAction<AspectRatio>>;
+    imageProvider: AIServiceProvider;
+    setImageProvider: React.Dispatch<React.SetStateAction<AIServiceProvider>>;
     imgCount: number;
     setImgCount: (value: number) => void;
     handleGenerateImages: () => void;
@@ -80,7 +81,7 @@ export const AIStudioView: React.FC<AIStudioViewProps> = ({
                                 ].map((ratio) => (
                                     <button 
                                         key={ratio.val}
-                                        onClick={() => setAspectRatio(ratio.val)}
+                                        onClick={() => setAspectRatio(ratio.val as AspectRatio)}
                                         className={`relative px-4 py-2 rounded-xl font-bold text-[13px] transition-all flex items-center justify-center shadow-sm border ${
                                             aspectRatio === ratio.val 
                                             ? 'bg-accent-purple text-white border-accent-purple' 
@@ -104,7 +105,7 @@ export const AIStudioView: React.FC<AIStudioViewProps> = ({
                                 <label className="text-[14px] font-black text-text-main">AI Model</label>
                                 <select
                                     value={imageProvider}
-                                    onChange={(e) => setImageProvider(e.target.value)}
+                                    onChange={(e) => setImageProvider(e.target.value as AIServiceProvider)}
                                     className="w-full bg-card rounded-xl p-2.5 text-[13px] font-bold text-text-main shadow-inner appearance-none cursor-pointer border border-border outline-none focus:border-accent-purple"
                                     style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%238b9bb4'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '0.8em' }}
                                 >

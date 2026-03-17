@@ -139,8 +139,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
       handleToggleAutoAI
   } = usePinProcessor({
       pins, setPins, selectedCount: pins.filter(p => p.selected).length, activeAccountId, boards, isStealthMode, isAdmin,
-      userProfile, globalSettings, setGlobalSettings, destinationLink, getSmartLinkSettings, trackUsage, addToast,
-      activeKeywords
+      userProfile, destinationLink, getSmartLinkSettings, trackUsage, addToast, setAiStats, activeKeywords
   });
   
   const [isAutoSmartLink, setIsAutoSmartLink] = useState(false); 
@@ -1262,7 +1261,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
                            allSelected={allSelected} handleSelectAll={handleSelectAll} selectedCount={selectedCount} 
                            handleDeleteSelected={handleDeleteSelected} handleClearInfo={handleClearInfo} isProcessingAI={isProcessingAI} 
                            errorCount={errorCount} handleToggleAutoAI={handleToggleAutoAI} handleSpinContent={handleSpinContent} 
-                           pins={pins} isSpinning={isSpinning} isAdmin={isAdmin} userProfile={userProfile} 
+                           pins={pins} isSpinning={isSpinning} isAdmin={isAdmin} userProfile={userProfile || undefined} 
                            activeAccountId={activeAccountId} setActiveAccountId={setActiveAccountId} webhookMenuRef={webhookMenuRef} isSendingWebhook={isSendingWebhook} 
                            handleCancelExport={handleCancelExport} showWebhookMenu={showWebhookMenu} setShowWebhookMenu={setShowWebhookMenu} 
                            webhookAccounts={webhookAccounts} onOpenSettings={() => setActiveNavTab('settings')} selectedWebhookId={selectedWebhookId} 

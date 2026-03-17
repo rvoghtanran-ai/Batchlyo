@@ -8,8 +8,6 @@ import { User as FirebaseUser } from 'firebase/auth';
 interface HeaderProps {
   currentProvider: AIServiceProvider;
   onReset: () => void;
-  onOpenSettings: () => void;
-  onOpenSmartLink: () => void;
   onOpenCsvSettings: () => void;
   onOpenAdmin: () => void; 
   stats: {
@@ -25,7 +23,7 @@ interface HeaderProps {
   onToggleTheme?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ currentProvider, onReset, onOpenSettings, onOpenSmartLink, onOpenCsvSettings, onOpenAdmin, stats, user, userProfile, isAdmin, onLogout, isDarkMode, onToggleTheme }) => {
+const Header: React.FC<HeaderProps> = ({ currentProvider, onReset, onOpenCsvSettings, onOpenAdmin, stats, user, userProfile, isAdmin, onLogout, isDarkMode, onToggleTheme }) => {
   const navigate = useNavigate();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);

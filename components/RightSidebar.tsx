@@ -5,7 +5,7 @@ import { Board, WebhookAccount } from '../types';
 interface RightSidebarProps {
     isStealthMode: boolean;
     setIsStealthMode: (val: boolean) => void;
-    userPlan: string;
+    userPlan?: string;
     
     destinationLink: string;
     setDestinationLink: (val: string) => void;

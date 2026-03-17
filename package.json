@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "start": "node server.ts",
+    "start": "node server.js",
     "build": "tsc -b && vite build",
+    "build:server": "tsc server.ts --module NodeNext --moduleResolution NodeNext --target es2022 --esModuleInterop",
     "lint": "tsc --noEmit",
     "preview": "vite preview"
   },

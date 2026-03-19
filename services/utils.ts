@@ -845,52 +845,40 @@ export const sendBatchToWebhook = async (webhookUrl: string, pins: Pin[], csvSet
         const sendRequest = async (bodyData: any) => {
              const body = JSON.stringify(bodyData);
              
-             // 1. Try Standard JSON
              try {
+                // 1. Try Standard JSON First
                 const res = await fetch(webhookUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: body
                 });
-                if (res.ok) return true;
+                // If the server responded (even if it's 400+), do not retry.
+                // That means CORS passed and the server received it.
+                return true;
              } catch (e) {
-                console.warn("Webhook JSON fetch failed. Trying text/plain...", e);
-             }
-
-             // 2. Try text/plain (Simple Request)
-             try {
-                 const res2 = await fetch(webhookUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: body
-                 });
-                 if (res2.ok) return true;
-             } catch (e) {
-                 console.warn("Webhook text/plain fetch failed. Trying no-cors...", e);
-             }
-
-             // 3. Try no-cors (Opaque)
-             // This is often needed for Google Apps Script or strict CORS servers
-             // We can't verify success, but it usually works if endpoint exists
-             try {
-                 await fetch(webhookUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: body,
-                    mode: 'no-cors'
-                 });
-                 console.log("Sent via no-cors mode (opaque response). Assuming success.");
-                 return true;
-             } catch(e) {
-                 throw new Error("All webhook connection attempts failed. Check CORS or URL.");
+                 // 2. Network Error (Usually a strict CORS block from Zapier/Make)
+                 try {
+                     // Fire-and-forget opaque request (no CORS preflight)
+                     await fetch(webhookUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: body,
+                        mode: 'no-cors'
+                     });
+                     return true;
+                 } catch(e2) {
+                     return false;
+                 }
              }
         };
 
         if (sendIndividually) {
-             for (const item of payloadObjects) {
-                 await sendRequest(item);
-                 // Small delay to prevent rate limiting
-                 await new Promise(r => setTimeout(r, 200)); 
+             // Process in concurrent batches of 10 to speed up drastically while respecting simple rate limits
+             const CHUNK_SIZE = 10;
+             for (let i = 0; i < payloadObjects.length; i += CHUNK_SIZE) {
+                 const chunk = payloadObjects.slice(i, i + CHUNK_SIZE);
+                 await Promise.all(chunk.map(item => sendRequest(item)));
+                 await new Promise(r => setTimeout(r, 600)); // Small pause between chunks
              }
              return true;
         } else {

@@ -905,21 +905,30 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
           if (saved) { try { customSettings = JSON.parse(saved); } catch(e){} }
           const pinsToExport = JSON.parse(JSON.stringify(pins));
           
-          for (const pin of pinsToExport) {
-              if (abortExportRef.current) throw new Error("Cancelled");
-              if (pin.imageUrl.startsWith('data:') || pin.imageUrl.startsWith('blob:')) {
-                  try {
-                      const hostedUrl = await uploadImage(pin.imageUrl, imgSettings);
-                      if (hostedUrl && hostedUrl.startsWith('http')) {
-                          pin.imageUrl = hostedUrl;
-                          setPins(prev => prev.map(p => p.id === pin.id ? { ...p, imageUrl: hostedUrl } : p));
-                      } else {
-                          throw new Error("Empty URL returned from host");
+          // Pre-processing: Aggressive compression and concurrent batching for Image Uploads
+          const dataPins = pinsToExport.filter((p: any) => p.imageUrl.startsWith('data:') || p.imageUrl.startsWith('blob:'));
+          if (dataPins.length > 0) {
+              const CHUNK_SIZE = 5;
+              for (let i = 0; i < dataPins.length; i += CHUNK_SIZE) {
+                  if (abortExportRef.current) throw new Error("Cancelled");
+                  const chunk = dataPins.slice(i, i + CHUNK_SIZE);
+                  
+                  await Promise.all(chunk.map(async (pin: any) => {
+                      try {
+                          const compressedBase64 = await compressImage(pin.imageUrl);
+                          const hostedUrl = await uploadImage(compressedBase64, imgSettings);
+                          if (hostedUrl && hostedUrl.startsWith('http')) {
+                              pin.imageUrl = hostedUrl; // mutate the export payload directly
+                              setPins(prev => prev.map(p => p.id === pin.id ? { ...p, imageUrl: hostedUrl } : p));
+                          } else {
+                              throw new Error("Empty URL returned from host");
+                          }
+                      } catch(e: any) {
+                          throw new Error(`Image Upload Failed for ${pin.id}: ${e.message}`);
                       }
-                  } catch(e: any) {
-                      throw new Error(`Image Upload Failed for ${pin.id}: ${e.message}`);
-                  }
-                  await new Promise(r => setTimeout(r, 500));
+                  }));
+                  // 100ms trickle delay between chunks to prevent ImgBB Free Tier IP blocks
+                  await new Promise(r => setTimeout(r, 100));
               }
           }
           

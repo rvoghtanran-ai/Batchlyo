@@ -130,7 +130,7 @@ export function usePinProcessor({
 
                 const accId = activeAccountId || 'default';
                 
-                if (finalPin.originalImageUrl?.startsWith('data:')) {
+                if (isStealthMode && finalPin.originalImageUrl?.startsWith('data:')) {
                     const remixedImage = await applyStealthFilters(finalPin.originalImageUrl);
                     finalPin = { 
                         ...finalPin, 

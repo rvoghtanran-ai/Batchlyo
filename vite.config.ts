@@ -9,6 +9,8 @@ export default defineConfig(({ mode }) => {
     define: {
       'process.env': {},
       'process.env.API_KEY': JSON.stringify(env.API_KEY),
+      'process.env.CLOUDFLARE_API_KEY': JSON.stringify(env.CLOUDFLARE_API_KEY),
+      'process.env.CLOUDFLARE_ACCOUNT_ID': JSON.stringify(env.CLOUDFLARE_ACCOUNT_ID),
     }
   };
 });

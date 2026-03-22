@@ -78,7 +78,7 @@ export class AIService {
   }
 
   public getCloudflareAccountId(): string {
-      return this.cloudflareAccountId;
+      return this.cloudflareAccountId || process.env.CLOUDFLARE_ACCOUNT_ID || '';
   }
 
   // NEW: Setter for Custom Model
@@ -106,6 +106,11 @@ export class AIService {
     if (target === AIServiceProvider.GEMINI) {
       return process.env.API_KEY || '';
     }
+
+    // 3. Fallback to System Key (Cloudflare)
+    if (target === AIServiceProvider.CLOUDFLARE) {
+      return process.env.CLOUDFLARE_API_KEY || '';
+    }
     
     return '';
   }
@@ -126,9 +131,9 @@ export class AIService {
       for (const p of allProviders) {
           if (p === this.currentProvider) continue;
           if (p === AIServiceProvider.POLLINATIONS) continue; 
-          if (p === AIServiceProvider.CLOUDFLARE && !this.cloudflareAccountId) continue;
+          if (p === AIServiceProvider.CLOUDFLARE && !this.getCloudflareAccountId()) continue;
 
-          const key = this.apiKeys[p];
+          const key = this.getApiKey(p);
           if (key && key.length > 5) {
               alternatives.push(p);
           }

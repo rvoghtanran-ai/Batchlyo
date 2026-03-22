@@ -873,12 +873,12 @@ export const sendBatchToWebhook = async (webhookUrl: string, pins: Pin[], csvSet
         };
 
         if (sendIndividually) {
-             // Process in concurrent batches of 10 to speed up drastically while respecting simple rate limits
-             const CHUNK_SIZE = 10;
-             for (let i = 0; i < payloadObjects.length; i += CHUNK_SIZE) {
-                 const chunk = payloadObjects.slice(i, i + CHUNK_SIZE);
-                 await Promise.all(chunk.map(item => sendRequest(item)));
-                 await new Promise(r => setTimeout(r, 600)); // Small pause between chunks
+             // We must process sequentially. Make.com, Zapier, and Pipedream heavily penalize and queue 
+             // burst concurrent requests (which causes 200 pins to take minutes/hours to clear).
+             // Sending a steady stream of 1 request per 300ms bypasses burst limits completely.
+             for (const item of payloadObjects) {
+                 await sendRequest(item);
+                 await new Promise(r => setTimeout(r, 300)); 
              }
              return true;
         } else {

@@ -811,6 +811,35 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
   };
 
   const handleCancelExport = () => { abortExportRef.current = true; setIsExportingCsv(false); setIsSendingWebhook(false); };
+  
+  const recoverInputRef = useRef<HTMLInputElement>(null);
+  const handleRecoverDeadImages = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files;
+      if (!files) return;
+      const fileArray = Array.from(files);
+      
+      const targetPins = pins.filter(p => p.imageUrl.startsWith('blob:') || p.imageUrl.includes('placeholder.png'));
+      if (targetPins.length === 0) {
+          addToast("No broken or expired images found in your queue.", 'info');
+          return;
+      }
+      if (fileArray.length !== targetPins.length) {
+          addToast(`Warning: You selected ${fileArray.length} files, but there are ${targetPins.length} broken images. The data may misalign.`, 'error');
+      }
+      
+      let newPins = [...pins];
+      let fileIdx = 0;
+      for (let i = 0; i < newPins.length; i++) {
+          if ((newPins[i].imageUrl.startsWith('blob:') || newPins[i].imageUrl.includes('placeholder.png')) && fileIdx < fileArray.length) {
+              const url = URL.createObjectURL(fileArray[fileIdx]);
+              newPins[i] = { ...newPins[i], imageUrl: url, originalImageUrl: url };
+              fileIdx++;
+          }
+      }
+      setPins(newPins);
+      addToast(`Successfully re-mapped ${fileIdx} images to your text!`, 'success');
+      if (recoverInputRef.current) recoverInputRef.current.value = '';
+  };
 
   // --- PERMISSION CHECKS ---
   const isSubscriptionActive = () => {
@@ -1303,6 +1332,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
                                setActiveKeywords([]);
                                addToast?.('Keywords removed from all pins', 'success');
                            }}
+                           handleRecoverDeadImages={handleRecoverDeadImages}
+                           recoverInputRef={recoverInputRef}
                        />
                    )}
 

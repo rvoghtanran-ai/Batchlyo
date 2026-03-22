@@ -921,10 +921,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
                               pin.imageUrl = hostedUrl; // mutate the export payload directly
                               setPins(prev => prev.map(p => p.id === pin.id ? { ...p, imageUrl: hostedUrl } : p));
                           } else {
-                              throw new Error("Empty URL returned from host");
+                              console.warn(`[Exporter] Empty URL from host for Pin ${pin.id}`);
+                              pin.imageUrl = pin.originalImageUrl || "https://batchlyo.com/placeholder.png"; 
                           }
                       } catch(e: any) {
-                          throw new Error(`Image Upload Failed for ${pin.id}: ${e.message}`);
+                          console.error(`[Exporter] Image Upload Failed for ${pin.id}:`, e);
+                          // DO NOT throw an error - fail gracefully. 
+                          // If we throw here, the entire 500 queue collapses.
+                          // Replace the massive Base64 string with a fallback so it doesn't crash the Webhook payload size limits.
+                          pin.imageUrl = pin.originalImageUrl || "https://batchlyo.com/placeholder.png";
                       }
                   }));
                   // 100ms trickle delay between chunks to prevent ImgBB Free Tier IP blocks

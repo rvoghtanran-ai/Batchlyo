@@ -532,11 +532,24 @@ export const uploadImage = async (imageSource: string, settings: ImageHostSettin
             return await uploadToCloudinary(base64, settings.cloudName || '', settings.uploadPreset || '');
         
         case ImageHostProvider.FREEIMAGE:
-            return await uploadToFreeImageHost(base64, settings.apiKey || '');
+            return await uploadToFreeImageHost(base64, settings.apiKey || '6d207e02198a847aa98d0a2a901485a5');
         
         case ImageHostProvider.IMGBB:
         default:
-            return await uploadToImgBB(base64, settings.apiKey || '');
+            try {
+                return await uploadToImgBB(base64, settings.apiKey || '');
+            } catch (error: any) {
+                // If ImgBB throws a Rate Limit (400) or fails, automatically failover to FreeImage.host
+                if (error.message && (error.message.includes('Rate limit') || error.message.includes('400') || error.message.includes('429'))) {
+                    console.warn("[Utils] ImgBB Rate Limit Hit. Automatically falling back to FreeImage.host...");
+                    try {
+                        return await uploadToFreeImageHost(base64, '6d207e02198a847aa98d0a2a901485a5');
+                    } catch (fallbackError) {
+                        throw new Error(`Primary (ImgBB) and Fallback (FreeImage) both failed. Primary: ${error.message}`);
+                    }
+                }
+                throw error;
+            }
     }
 };
 

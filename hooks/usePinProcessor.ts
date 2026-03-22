@@ -313,7 +313,7 @@ export function usePinProcessor({
                 setAiStats({...aiService.getStats()});
                 successCount++;
                 
-                await new Promise(r => setTimeout(r, 4000)); 
+                await new Promise(r => setTimeout(r, 1500)); 
 
             } catch (e: any) {
                 console.error(`AI Error on Pin ${pin.id}`, e);

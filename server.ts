@@ -56,10 +56,11 @@ async function startServer() {
         return res.status(response.status).json({ error: errorText });
       }
 
-      // Handle binary response for Pollinations (images)
-      if (isPollinations) {
+      // Dynamic Binary Parsing for ANY model returning raw streams (Pollinations, modern Cloudflare endpoints)
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('image/') || contentType.includes('application/octet-stream')) {
         const buffer = await response.arrayBuffer();
-        res.setHeader('Content-Type', response.headers.get('Content-Type') || 'image/png');
+        res.setHeader('Content-Type', contentType);
         return res.send(Buffer.from(buffer));
       }
 

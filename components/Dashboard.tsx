@@ -352,39 +352,22 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
         const optimizeForWorkspace = async () => {
             const accId = activeAccountId || 'default';
             
-            // 1. Check who needs METADATA optimization (Smart Variation)
-            const needsMetadataOptimization = pins.filter(p => 
-                p.originalTitle && 
-                (!p.accountMetadata || !p.accountMetadata[accId])
-            );
-
-            // 2. Check who needs a "Swap" (Existing metadata stored for this account different from current view)
+            // 1. Check who needs a "Swap" (Existing metadata stored for this account different from current view)
             const needsSwap = pins.some(p => {
                 const storedMeta = p.accountMetadata?.[accId];
-                return storedMeta && (p.title !== storedMeta.title || p.description !== storedMeta.description);
+                if (storedMeta) {
+                    return p.title !== storedMeta.title || p.description !== storedMeta.description;
+                } else {
+                    // If no meta exists, we "Swap" back to original if current view isn't original
+                    return p.title !== (p.originalTitle || p.title) || p.description !== (p.originalDescription || p.description);
+                }
             });
 
-            if (needsMetadataOptimization.length === 0 && !needsSwap) return;
+            if (!needsSwap) return;
 
-            if (needsMetadataOptimization.length > 0) setIsSpinning(true);
-            
             try {
-                // Generate variations as a map first to avoid stale closure issues during the functional update
-                const variationsMap: Record<string, any> = {};
-                for (const pin of needsMetadataOptimization) {
-                    const basePinForRemix = {
-                        ...pin,
-                        title: pin.originalTitle || '',
-                        description: pin.originalDescription || '',
-                        tags: pin.originalTags || []
-                    };
-                    variationsMap[pin.id] = remixTextLocal(basePinForRemix);
-                }
-
                 setPins(prev => prev.map(p => {
                     const currentStoredMeta = p.accountMetadata?.[accId];
-                    const newMeta = variationsMap[p.id];
-                    
                     if (currentStoredMeta) {
                         return {
                             ...p,
@@ -392,32 +375,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
                             description: currentStoredMeta.description,
                             tags: currentStoredMeta.tags
                         };
-                    } else if (newMeta) {
+                    } else {
+                        // Revert to original content for this "fresh" account slot
                         return {
                             ...p,
-                            title: newMeta.title,
-                            description: newMeta.description,
-                            tags: newMeta.tags,
-                            accountMetadata: {
-                                ...(p.accountMetadata || {}),
-                                [accId]: {
-                                    title: newMeta.title,
-                                    description: newMeta.description,
-                                    tags: newMeta.tags
-                                }
-                            }
+                            title: p.originalTitle || p.title,
+                            description: p.originalDescription || p.description,
+                            tags: p.originalTags || p.tags
                         };
                     }
-                    return p;
                 }));
-
-                if (needsMetadataOptimization.length > 0) {
-                    addToast(`Workspace Synced: Unique variations generated for this account`, 'info');
-                }
             } catch(e) {
-                console.error("Per-Account Optimization Failed", e);
-            } finally {
-                setIsSpinning(false);
+                console.error("Account Metadata Sync Failed", e);
             }
         };
         const timer = setTimeout(() => optimizeForWorkspace(), 300);

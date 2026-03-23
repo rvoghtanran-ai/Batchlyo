@@ -54,8 +54,6 @@ interface BulkQueueViewProps {
     setVisibleCount: React.Dispatch<React.SetStateAction<number>>;
     activeKeywords?: string[];
     onClearKeywords?: () => void;
-    handleRecoverDeadImages: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    recoverInputRef: React.RefObject<HTMLInputElement>;
 }
 
 export const BulkQueueView: React.FC<BulkQueueViewProps> = ({
@@ -69,8 +67,7 @@ export const BulkQueueView: React.FC<BulkQueueViewProps> = ({
     setShowExportMenu, handleExport, activeTab, setActiveTab, readyCount,
     availableBoards, groupedPins, visiblePins, handleDeletePin, handleToggleSelect,
     handleEditPin, visibleCount, setVisibleCount,
-    activeKeywords, onClearKeywords,
-    handleRecoverDeadImages, recoverInputRef
+    activeKeywords, onClearKeywords
 }) => {
     const parentRef = useRef<HTMLDivElement>(null);
 
@@ -136,7 +133,6 @@ export const BulkQueueView: React.FC<BulkQueueViewProps> = ({
                     <div className="h-4 w-[1px] bg-border hidden sm:block"></div>
                     <div className="flex items-center gap-2">
                       {displayedPins.length > 0 && (
-                          <>
                           <button 
                           onClick={handleSelectAll}
                           className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-text-main transition-colors bg-card px-3 py-1.5 rounded-lg border border-border hover:border-text-muted shadow-sm"
@@ -144,17 +140,6 @@ export const BulkQueueView: React.FC<BulkQueueViewProps> = ({
                           {allSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4 text-text-muted" />}
                           {allSelected ? 'Deselect All' : 'Select All'}
                           </button>
-                          
-                          <button 
-                              onClick={() => recoverInputRef.current?.click()}
-                              className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-rose-400 transition-colors bg-rose-500/5 px-3 py-1.5 rounded-lg border border-border hover:border-rose-500/30 hover:bg-rose-500/10 shadow-sm"
-                              title="If your images expired or show as placeholders, click here to reselect the local files from your computer and restore them seamlessly."
-                          >
-                              <AlertTriangle className="w-3.5 h-3.5" />
-                              Recover Images
-                          </button>
-                          <input type="file" multiple accept="image/*" className="hidden" ref={recoverInputRef} onChange={handleRecoverDeadImages} />
-                          </>
                       )}
                       {selectedCount > 0 && (
                           <>

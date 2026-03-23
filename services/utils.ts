@@ -532,37 +532,11 @@ export const uploadImage = async (imageSource: string, settings: ImageHostSettin
             return await uploadToCloudinary(base64, settings.cloudName || '', settings.uploadPreset || '');
         
         case ImageHostProvider.FREEIMAGE:
-            return await uploadToFreeImageHost(base64, settings.apiKey || '6d207e02198a847aa98d0a2a901485a5');
+            return await uploadToFreeImageHost(base64, settings.apiKey || '');
         
         case ImageHostProvider.IMGBB:
         default:
-            try {
-                return await uploadToImgBB(base64, settings.apiKey || '');
-            } catch (error: any) {
-                console.warn(`[Utils] Primary Host (ImgBB) Failed: ${error.message}. Routing to Catbox.moe...`);
-                try {
-                    // Catbox requires binary Blob, not Base64
-                    const blobResponse = await fetch(base64);
-                    const blob = await blobResponse.blob();
-                    
-                    const formData = new FormData();
-                    formData.append('reqtype', 'fileupload');
-                    formData.append('fileToUpload', blob, 'pinlly-export.webp');
-                    
-                    const catboxRes = await fetch("https://catbox.moe/user/api.php", {
-                        method: "POST",
-                        body: formData
-                    });
-                    
-                    if (!catboxRes.ok) throw new Error(`Catbox HTTP ${catboxRes.status}`);
-                    const catboxUrl = await catboxRes.text();
-                    
-                    if (catboxUrl && catboxUrl.startsWith("http")) return catboxUrl;
-                    throw new Error("Catbox returned invalid URL");
-                } catch (catboxError: any) {
-                    throw new Error(`Catbox fallback failed: ${catboxError.message}. Original ImgBB Error: ${error.message}`);
-                }
-            }
+            return await uploadToImgBB(base64, settings.apiKey || '');
     }
 };
 
@@ -843,12 +817,12 @@ export const sendBatchToWebhook = async (webhookUrl: string, pins: Pin[], csvSet
     try {
         const titleHeader = getHeader(csvSettings?.titleHeader, 'Title');
         const descriptionHeader = getHeader(csvSettings?.descriptionHeader, 'Description');
-        const linkHeader = getHeader(csvSettings?.linkHeader, 'Link');
-        const imageHeader = getHeader(csvSettings?.imageHeader, 'Image');
+        const linkHeader = getHeader(csvSettings?.linkHeader, 'Source Url');
+        const imageHeader = getHeader(csvSettings?.imageHeader, 'Image Url');
         const boardHeader = getHeader(csvSettings?.boardHeader, 'Board');
         const boardIdHeader = getHeader(csvSettings?.boardIdHeader, 'Board ID');
-        const tagsHeader = getHeader(csvSettings?.tagsHeader, 'Tags');
-        const dateHeader = getHeader(csvSettings?.dateHeader, 'Date');
+        const tagsHeader = getHeader(csvSettings?.tagsHeader, 'Keywords');
+        const dateHeader = getHeader(csvSettings?.dateHeader, 'Schedule Date');
         
         const statusHeaderRaw = csvSettings?.statusHeader;
         const statusHeader = (statusHeaderRaw && statusHeaderRaw.trim() !== '') ? statusHeaderRaw : 'Status';

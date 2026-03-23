@@ -318,28 +318,19 @@ export class AIService {
                  throw new Error(`Cloudflare Generation Failed: ${errorText}`);
              }
 
-             const contentType = proxyResponse.headers.get('content-type') || '';
-             
-             if (contentType.includes('image/') || contentType.includes('application/octet-stream')) {
-                 const blob = await proxyResponse.blob();
-                 const imgData = await new Promise<string>((resolve, reject) => {
-                     const reader = new FileReader();
-                     reader.onloadend = () => resolve(reader.result as string);
-                     reader.onerror = reject;
-                     reader.readAsDataURL(blob);
-                 });
-                 images.push(imgData);
+             const data = await proxyResponse.json();
+             if (data.result && data.result.image) {
+                 images.push(`data:image/png;base64,${data.result.image}`);
              } else {
-                 const data = await proxyResponse.json();
-                 if (data.result && data.result.image) {
-                     images.push(`data:image/png;base64,${data.result.image}`);
-                 } else {
-                     throw new Error("No image data in Cloudflare response");
-                 }
+                 throw new Error("No image data in Cloudflare response");
              }
 
          } catch (e: any) {
              console.error("[AI] Cloudflare Generation Error:", e);
+             // If it's a permission/auth error, throw it so the user sees the specific message
+             if (e.message.includes("Cloudflare Generation Failed")) {
+                  throw new Error("Image Generation Failed: Cloudflare Generation Failed. 1. Check Account ID. 2. Use an API TOKEN (not Global Key) with 'Workers AI Read' permissions. 3. Check browser console for CORS errors.");
+             }
              throw e;
          }
          
@@ -347,7 +338,7 @@ export class AIService {
       }
       
       if (images.length === 0) {
-          throw new Error("Cloudflare did not return any image data.");
+          throw new Error("Image Generation Failed: Cloudflare Generation Failed. 1. Check Account ID. 2. Use an API TOKEN (not Global Key) with 'Workers AI Read' permissions. 3. Check browser console for CORS errors.");
       }
 
       this.stats.requests += 1;

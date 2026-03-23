@@ -369,43 +369,48 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
             if (needsMetadataOptimization.length > 0) setIsSpinning(true);
             
             try {
-                const processed = await Promise.all(pins.map(async (pin) => {
-                    let updatedPin = { ...pin };
-                    const currentStoredMeta = pin.accountMetadata?.[accId];
+                // Generate variations as a map first to avoid stale closure issues during the functional update
+                const variationsMap: Record<string, any> = {};
+                for (const pin of needsMetadataOptimization) {
+                    const basePinForRemix = {
+                        ...pin,
+                        title: pin.originalTitle || '',
+                        description: pin.originalDescription || '',
+                        tags: pin.originalTags || []
+                    };
+                    variationsMap[pin.id] = remixTextLocal(basePinForRemix);
+                }
 
-                    // --- METADATA SYNC (The "Smart Variation" Logic) ---
+                setPins(prev => prev.map(p => {
+                    const currentStoredMeta = p.accountMetadata?.[accId];
+                    const newMeta = variationsMap[p.id];
+                    
                     if (currentStoredMeta) {
-                        updatedPin.title = currentStoredMeta.title;
-                        updatedPin.description = currentStoredMeta.description;
-                        updatedPin.tags = currentStoredMeta.tags;
-                    } else if (pin.originalTitle) {
-                        // Generate FREE local variation for this account slot from the AI "Source of Truth"
-                        const basePinForRemix = {
-                            ...pin,
-                            title: pin.originalTitle,
-                            description: pin.originalDescription || '',
-                            tags: pin.originalTags || []
+                        return {
+                            ...p,
+                            title: currentStoredMeta.title,
+                            description: currentStoredMeta.description,
+                            tags: currentStoredMeta.tags
                         };
-                        const variations = remixTextLocal(basePinForRemix);
-                        
-                        updatedPin.title = variations.title || pin.originalTitle;
-                        updatedPin.description = variations.description || pin.originalDescription || '';
-                        updatedPin.tags = variations.tags || pin.originalTags || [];
-
-                        updatedPin.accountMetadata = {
-                            ...(pin.accountMetadata || {}),
-                            [accId]: {
-                                title: updatedPin.title,
-                                description: updatedPin.description,
-                                tags: updatedPin.tags
+                    } else if (newMeta) {
+                        return {
+                            ...p,
+                            title: newMeta.title,
+                            description: newMeta.description,
+                            tags: newMeta.tags,
+                            accountMetadata: {
+                                ...(p.accountMetadata || {}),
+                                [accId]: {
+                                    title: newMeta.title,
+                                    description: newMeta.description,
+                                    tags: newMeta.tags
+                                }
                             }
                         };
                     }
-
-                    return updatedPin;
+                    return p;
                 }));
 
-                setPins(processed);
                 if (needsMetadataOptimization.length > 0) {
                     addToast(`Workspace Synced: Unique variations generated for this account`, 'info');
                 }
@@ -828,6 +833,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
           const pinsToExport = JSON.parse(JSON.stringify(pins));
           for (const pin of pinsToExport) {
               if (abortExportRef.current) throw new Error("Cancelled");
+              
+              // Parallel Check: If another process (like a webhook send) just hosted this, reuse it
+              setPins(current => {
+                  const latest = current.find(p => p.id === pin.id);
+                  if (latest && latest.imageUrl.startsWith('http')) pin.imageUrl = latest.imageUrl;
+                  return current;
+              });
+
+              if (pin.imageUrl.startsWith('http')) continue;
+
               if (pin.imageUrl.startsWith('data:') || pin.imageUrl.startsWith('blob:')) {
                   const hostedUrl = await uploadImage(pin.imageUrl, imgSettings);
                   if (hostedUrl && hostedUrl.startsWith('http')) {
@@ -887,6 +902,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
                   
                   await Promise.all(chunk.map(async (pin: any) => {
                       try {
+                          if (pin.imageUrl.startsWith('http')) return;
                           const compressedBase64 = await compressImage(pin.imageUrl);
                           const hostedUrl = await uploadImage(compressedBase64, imgSettings);
                           if (hostedUrl && hostedUrl.startsWith('http')) {

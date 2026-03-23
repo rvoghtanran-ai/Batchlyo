@@ -952,14 +952,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
                           // Mutate UI state cleanly so if loop cancels, done images are saved
                           setPins(prev => prev.map(p => p.id === pin.id ? { ...p, imageUrl: hostedUrl } : p));
                       } else {
-                          console.warn(`[Exporter] Empty URL from host for Pin ${pin.id}`);
-                          pin.imageUrl = "https://batchlyo.com/placeholder.png"; 
+                          throw new Error(`Empty URL returned from host for Pin ${pin.title}`);
                       }
                   } catch(e: any) {
                       console.error(`[Exporter] Image Upload Failed for ${pin.id}:`, e);
-                      // Force clear the 5MB Base64/Blob string if upload absolutely failed.
-                      // If we send a Blob URL over Webhook, Make.com explicitly rejects the field.
-                      pin.imageUrl = "https://batchlyo.com/placeholder.png";
+                      // Instantly abort and relay exact third-party host error to user UI so they know their API key/limits are blocking it.
+                      throw new Error(`Image Upload Failed: ${e?.message || 'Host connection refused'}`);
                   }
                   
                   // Mandatory 1000ms delay perfectly circumvents Free-Tier Firewall caps

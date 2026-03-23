@@ -77,6 +77,16 @@ const SettingsView: React.FC<SettingsViewProps> = ({ userPlan = 'starter', webho
     }
   }, []);
 
+  // Auto-Save Image Host Settings on any change to prevent unmount data loss
+  useEffect(() => {
+     if (imgSettings.provider) {
+         localStorage.setItem('easyPin_imgHostSettings', JSON.stringify(imgSettings));
+         if (imgSettings.provider === ImageHostProvider.IMGBB && imgSettings.apiKey) {
+             localStorage.setItem('easyPin_imgbbKey', imgSettings.apiKey);
+         }
+     }
+  }, [imgSettings]);
+
   const handleSave = () => {
     setSaveStatus('saving');
     

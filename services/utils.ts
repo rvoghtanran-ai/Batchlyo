@@ -830,12 +830,12 @@ export const sendBatchToWebhook = async (webhookUrl: string, pins: Pin[], csvSet
     try {
         const titleHeader = getHeader(csvSettings?.titleHeader, 'Title');
         const descriptionHeader = getHeader(csvSettings?.descriptionHeader, 'Description');
-        const linkHeader = getHeader(csvSettings?.linkHeader, 'Link');
-        const imageHeader = getHeader(csvSettings?.imageHeader, 'Image');
+        const linkHeader = getHeader(csvSettings?.linkHeader, 'Source Url');
+        const imageHeader = getHeader(csvSettings?.imageHeader, 'Image Url');
         const boardHeader = getHeader(csvSettings?.boardHeader, 'Board');
         const boardIdHeader = getHeader(csvSettings?.boardIdHeader, 'Board ID');
-        const tagsHeader = getHeader(csvSettings?.tagsHeader, 'Tags');
-        const dateHeader = getHeader(csvSettings?.dateHeader, 'Date');
+        const tagsHeader = getHeader(csvSettings?.tagsHeader, 'Keywords');
+        const dateHeader = getHeader(csvSettings?.dateHeader, 'Schedule Date');
         
         const statusHeaderRaw = csvSettings?.statusHeader;
         const statusHeader = (statusHeaderRaw && statusHeaderRaw.trim() !== '') ? statusHeaderRaw : 'Status';

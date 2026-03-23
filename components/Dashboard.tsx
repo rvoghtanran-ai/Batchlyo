@@ -352,52 +352,26 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
         const optimizeForWorkspace = async () => {
             const accId = activeAccountId || 'default';
             
-            // 1. Check who needs IMAGE optimization
-            const needsImageOptimization = pins.filter(p => 
-                p.originalImageUrl?.startsWith('data:') && 
-                (!p.accountOptimizedImages || !p.accountOptimizedImages[accId])
-            );
-
-            // 2. Check who needs METADATA optimization (Smart Variation)
+            // 1. Check who needs METADATA optimization (Smart Variation)
             const needsMetadataOptimization = pins.filter(p => 
                 p.originalTitle && 
                 (!p.accountMetadata || !p.accountMetadata[accId])
             );
 
-            const needsOptimizationCount = needsImageOptimization.length + needsMetadataOptimization.length;
-
-            // 3. UI Swap logic: Do we need to sync the current state to the account's stored data?
+            // 2. Check who needs a "Swap" (Existing metadata stored for this account different from current view)
             const needsSwap = pins.some(p => {
-                const storedImg = p.accountOptimizedImages?.[accId] || p.originalImageUrl;
                 const storedMeta = p.accountMetadata?.[accId];
-                const imgDiff = p.imageUrl !== storedImg;
-                const metaDiff = storedMeta && (p.title !== storedMeta.title || p.description !== storedMeta.description);
-                return imgDiff || metaDiff;
+                return storedMeta && (p.title !== storedMeta.title || p.description !== storedMeta.description);
             });
 
-            if (needsOptimizationCount === 0 && !needsSwap) return;
+            if (needsMetadataOptimization.length === 0 && !needsSwap) return;
 
-            if (needsOptimizationCount > 0) setIsSpinning(true);
+            if (needsMetadataOptimization.length > 0) setIsSpinning(true);
             
             try {
                 const processed = await Promise.all(pins.map(async (pin) => {
                     let updatedPin = { ...pin };
-                    const currentStoredImg = pin.accountOptimizedImages?.[accId];
                     const currentStoredMeta = pin.accountMetadata?.[accId];
-
-                    // --- IMAGE SYNC ---
-                    if (currentStoredImg) {
-                        updatedPin.imageUrl = currentStoredImg;
-                    } else if (pin.originalImageUrl?.startsWith('data:')) {
-                        const cropped = await applyStealthFilters(pin.originalImageUrl);
-                        updatedPin.imageUrl = cropped;
-                        updatedPin.accountOptimizedImages = {
-                            ...(pin.accountOptimizedImages || {}),
-                            [accId]: cropped
-                        };
-                    } else {
-                        updatedPin.imageUrl = pin.originalImageUrl || pin.imageUrl;
-                    }
 
                     // --- METADATA SYNC (The "Smart Variation" Logic) ---
                     if (currentStoredMeta) {
@@ -432,7 +406,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
                 }));
 
                 setPins(processed);
-                if (needsOptimizationCount > 0) {
+                if (needsMetadataOptimization.length > 0) {
                     addToast(`Workspace Synced: Unique variations generated for this account`, 'info');
                 }
             } catch(e) {
@@ -621,7 +595,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
                                       id: uuidv4(),
                                       imageUrl: imageUrl || 'https://via.placeholder.com/150?text=No+Image',
                                       originalImageUrl: imageUrl || 'https://via.placeholder.com/150?text=No+Image',
-                                      accountOptimizedImages: {},
                                       originalTitle: title || '',
                                       originalDescription: description || '',
                                       originalTags: tags,
@@ -730,7 +703,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
       id: uuidv4(), 
       imageUrl: img, 
       originalImageUrl: img,
-      accountOptimizedImages: {},
       originalTitle: '',
       originalDescription: '',
       originalTags: [],
@@ -811,35 +783,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
   };
 
   const handleCancelExport = () => { abortExportRef.current = true; setIsExportingCsv(false); setIsSendingWebhook(false); };
-  
-  const recoverInputRef = useRef<HTMLInputElement>(null);
-  const handleRecoverDeadImages = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = e.target.files;
-      if (!files) return;
-      const fileArray = Array.from(files);
-      
-      const targetPins = pins.filter(p => p.imageUrl.startsWith('blob:') || p.imageUrl.includes('placeholder.png'));
-      if (targetPins.length === 0) {
-          addToast("No broken or expired images found in your queue.", 'info');
-          return;
-      }
-      if (fileArray.length !== targetPins.length) {
-          addToast(`Warning: You selected ${fileArray.length} files, but there are ${targetPins.length} broken images. The data may misalign.`, 'error');
-      }
-      
-      let newPins = [...pins];
-      let fileIdx = 0;
-      for (let i = 0; i < newPins.length; i++) {
-          if ((newPins[i].imageUrl.startsWith('blob:') || newPins[i].imageUrl.includes('placeholder.png')) && fileIdx < fileArray.length) {
-              const url = URL.createObjectURL(fileArray[fileIdx]);
-              newPins[i] = { ...newPins[i], imageUrl: url, originalImageUrl: url };
-              fileIdx++;
-          }
-      }
-      setPins(newPins);
-      addToast(`Successfully re-mapped ${fileIdx} images to your text!`, 'success');
-      if (recoverInputRef.current) recoverInputRef.current.value = '';
-  };
 
   // --- PERMISSION CHECKS ---
   const isSubscriptionActive = () => {
@@ -934,34 +877,30 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
           if (saved) { try { customSettings = JSON.parse(saved); } catch(e){} }
           const pinsToExport = JSON.parse(JSON.stringify(pins));
           
-          // Pre-processing: Strict Sequential Uploading to NEVER trigger IP Rate Limiters
+          // Pre-processing: Aggressive compression and concurrent batching for Image Uploads
           const dataPins = pinsToExport.filter((p: any) => p.imageUrl.startsWith('data:') || p.imageUrl.startsWith('blob:'));
           if (dataPins.length > 0) {
-              for (let i = 0; i < dataPins.length; i++) {
+              const CHUNK_SIZE = 5;
+              for (let i = 0; i < dataPins.length; i += CHUNK_SIZE) {
                   if (abortExportRef.current) throw new Error("Cancelled");
-                  const pin = dataPins[i];
+                  const chunk = dataPins.slice(i, i + CHUNK_SIZE);
                   
-                  try {
-                      // 1. Compress Image into WebP (keeps memory low)
-                      const compressedBase64 = await compressImage(pin.imageUrl);
-                      // 2. Upload Single Image
-                      const hostedUrl = await uploadImage(compressedBase64, imgSettings);
-                      
-                      if (hostedUrl && hostedUrl.startsWith('http')) {
-                          pin.imageUrl = hostedUrl; // mutate export payload
-                          // Mutate UI state cleanly so if loop cancels, done images are saved
-                          setPins(prev => prev.map(p => p.id === pin.id ? { ...p, imageUrl: hostedUrl } : p));
-                      } else {
-                          throw new Error(`Empty URL returned from host for Pin ${pin.title}`);
+                  await Promise.all(chunk.map(async (pin: any) => {
+                      try {
+                          const compressedBase64 = await compressImage(pin.imageUrl);
+                          const hostedUrl = await uploadImage(compressedBase64, imgSettings);
+                          if (hostedUrl && hostedUrl.startsWith('http')) {
+                              pin.imageUrl = hostedUrl; // mutate the export payload directly
+                              setPins(prev => prev.map(p => p.id === pin.id ? { ...p, imageUrl: hostedUrl } : p));
+                          } else {
+                              throw new Error("Empty URL returned from host");
+                          }
+                      } catch(e: any) {
+                          throw new Error(`Image Upload Failed for ${pin.id}: ${e.message}`);
                       }
-                  } catch(e: any) {
-                      console.error(`[Exporter] Image Upload Failed for ${pin.id}:`, e);
-                      // Instantly abort and relay exact third-party host error to user UI so they know their API key/limits are blocking it.
-                      throw new Error(`Image Upload Failed: ${e?.message || 'Host connection refused'}`);
-                  }
-                  
-                  // Mandatory 1000ms delay perfectly circumvents Free-Tier Firewall caps
-                  await new Promise(r => setTimeout(r, 1000));
+                  }));
+                  // 100ms trickle delay between chunks to prevent ImgBB Free Tier IP blocks
+                  await new Promise(r => setTimeout(r, 100));
               }
           }
           
@@ -1331,8 +1270,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
                                setActiveKeywords([]);
                                addToast?.('Keywords removed from all pins', 'success');
                            }}
-                           handleRecoverDeadImages={handleRecoverDeadImages}
-                           recoverInputRef={recoverInputRef}
                        />
                    )}
 

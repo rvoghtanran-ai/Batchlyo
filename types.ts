@@ -18,7 +18,6 @@ export interface Pin {
   source: 'scraped' | 'upload' | 'generated';
   selected: boolean;
   originalImageUrl: string; // The raw source before account-specific cropping
-  accountOptimizedImages?: Record<string, string>; // Mapping: accountId -> croppedImageUrl
   originalTitle?: string; // AI Source of Truth: Title
   originalDescription?: string; // AI Source of Truth: Description
   originalTags?: string[]; // AI Source of Truth: Tags

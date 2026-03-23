@@ -130,16 +130,9 @@ export function usePinProcessor({
 
                 const accId = activeAccountId || 'default';
                 
-                if (isStealthMode && finalPin.originalImageUrl?.startsWith('data:')) {
-                    const remixedImage = await applyStealthFilters(finalPin.originalImageUrl);
-                    finalPin = { 
-                        ...finalPin, 
-                        imageUrl: remixedImage,
-                        accountOptimizedImages: {
-                            ...(finalPin.accountOptimizedImages || {}),
-                            [accId]: remixedImage
-                        }
-                    };
+                if (isStealthMode && finalPin.imageUrl?.startsWith('data:')) {
+                    const remixedImage = await applyStealthFilters(finalPin.imageUrl);
+                    finalPin.imageUrl = remixedImage;
                 }
 
                 finalPin.accountMetadata = {

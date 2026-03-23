@@ -934,35 +934,36 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
           if (saved) { try { customSettings = JSON.parse(saved); } catch(e){} }
           const pinsToExport = JSON.parse(JSON.stringify(pins));
           
-          // Pre-processing: Aggressive compression and concurrent batching for Image Uploads
+          // Pre-processing: Strict Sequential Uploading to NEVER trigger IP Rate Limiters
           const dataPins = pinsToExport.filter((p: any) => p.imageUrl.startsWith('data:') || p.imageUrl.startsWith('blob:'));
           if (dataPins.length > 0) {
-              const CHUNK_SIZE = 5;
-              for (let i = 0; i < dataPins.length; i += CHUNK_SIZE) {
+              for (let i = 0; i < dataPins.length; i++) {
                   if (abortExportRef.current) throw new Error("Cancelled");
-                  const chunk = dataPins.slice(i, i + CHUNK_SIZE);
+                  const pin = dataPins[i];
                   
-                  await Promise.all(chunk.map(async (pin: any) => {
-                      try {
-                          const compressedBase64 = await compressImage(pin.imageUrl);
-                          const hostedUrl = await uploadImage(compressedBase64, imgSettings);
-                          if (hostedUrl && hostedUrl.startsWith('http')) {
-                              pin.imageUrl = hostedUrl; // mutate the export payload directly
-                              setPins(prev => prev.map(p => p.id === pin.id ? { ...p, imageUrl: hostedUrl } : p));
-                          } else {
-                              console.warn(`[Exporter] Empty URL from host for Pin ${pin.id}`);
-                              pin.imageUrl = pin.originalImageUrl || "https://batchlyo.com/placeholder.png"; 
-                          }
-                      } catch(e: any) {
-                          console.error(`[Exporter] Image Upload Failed for ${pin.id}:`, e);
-                          // DO NOT throw an error - fail gracefully. 
-                          // If we throw here, the entire 500 queue collapses.
-                          // Replace the massive Base64 string with a fallback so it doesn't crash the Webhook payload size limits.
-                          pin.imageUrl = pin.originalImageUrl || "https://batchlyo.com/placeholder.png";
+                  try {
+                      // 1. Compress Image into WebP (keeps memory low)
+                      const compressedBase64 = await compressImage(pin.imageUrl);
+                      // 2. Upload Single Image
+                      const hostedUrl = await uploadImage(compressedBase64, imgSettings);
+                      
+                      if (hostedUrl && hostedUrl.startsWith('http')) {
+                          pin.imageUrl = hostedUrl; // mutate export payload
+                          // Mutate UI state cleanly so if loop cancels, done images are saved
+                          setPins(prev => prev.map(p => p.id === pin.id ? { ...p, imageUrl: hostedUrl } : p));
+                      } else {
+                          console.warn(`[Exporter] Empty URL from host for Pin ${pin.id}`);
+                          pin.imageUrl = "https://batchlyo.com/placeholder.png"; 
                       }
-                  }));
-                  // 100ms trickle delay between chunks to prevent ImgBB Free Tier IP blocks
-                  await new Promise(r => setTimeout(r, 100));
+                  } catch(e: any) {
+                      console.error(`[Exporter] Image Upload Failed for ${pin.id}:`, e);
+                      // Force clear the 5MB Base64/Blob string if upload absolutely failed.
+                      // If we send a Blob URL over Webhook, Make.com explicitly rejects the field.
+                      pin.imageUrl = "https://batchlyo.com/placeholder.png";
+                  }
+                  
+                  // Mandatory 1000ms delay perfectly circumvents Free-Tier Firewall caps
+                  await new Promise(r => setTimeout(r, 1000));
               }
           }
           

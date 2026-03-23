@@ -539,16 +539,29 @@ export const uploadImage = async (imageSource: string, settings: ImageHostSettin
             try {
                 return await uploadToImgBB(base64, settings.apiKey || '');
             } catch (error: any) {
-                // If ImgBB throws a Rate Limit (400) or fails, automatically failover to FreeImage.host
-                if (error.message && (error.message.includes('Rate limit') || error.message.includes('400') || error.message.includes('429'))) {
-                    console.warn("[Utils] ImgBB Rate Limit Hit. Automatically falling back to FreeImage.host...");
-                    try {
-                        return await uploadToFreeImageHost(base64, '6d207e02198a847aa98d0a2a901485a5');
-                    } catch (fallbackError) {
-                        throw new Error(`Primary (ImgBB) and Fallback (FreeImage) both failed. Primary: ${error.message}`);
-                    }
+                console.warn(`[Utils] Primary Host (ImgBB) Failed: ${error.message}. Routing to Catbox.moe...`);
+                try {
+                    // Catbox requires binary Blob, not Base64
+                    const blobResponse = await fetch(base64);
+                    const blob = await blobResponse.blob();
+                    
+                    const formData = new FormData();
+                    formData.append('reqtype', 'fileupload');
+                    formData.append('fileToUpload', blob, 'pinlly-export.webp');
+                    
+                    const catboxRes = await fetch("https://catbox.moe/user/api.php", {
+                        method: "POST",
+                        body: formData
+                    });
+                    
+                    if (!catboxRes.ok) throw new Error(`Catbox HTTP ${catboxRes.status}`);
+                    const catboxUrl = await catboxRes.text();
+                    
+                    if (catboxUrl && catboxUrl.startsWith("http")) return catboxUrl;
+                    throw new Error("Catbox returned invalid URL");
+                } catch (catboxError: any) {
+                    throw new Error(`Catbox fallback failed: ${catboxError.message}. Original ImgBB Error: ${error.message}`);
                 }
-                throw error;
             }
     }
 };

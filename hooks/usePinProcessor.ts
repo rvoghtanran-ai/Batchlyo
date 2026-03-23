@@ -185,7 +185,7 @@ export function usePinProcessor({
 
                 setPins(prev => prev.map(p => p.id === pin.id ? finalPin : p));
                 successAtLeastOne = true;
-                await new Promise(r => setTimeout(r, 200)); 
+                await new Promise(r => setTimeout(r, 50)); 
 
             } catch (e) {
                 console.error("Remix failed", e);
@@ -306,7 +306,7 @@ export function usePinProcessor({
                 setAiStats({...aiService.getStats()});
                 successCount++;
                 
-                await new Promise(r => setTimeout(r, 1500)); 
+                await new Promise(r => setTimeout(r, 400)); 
 
             } catch (e: any) {
                 console.error(`AI Error on Pin ${pin.id}`, e);

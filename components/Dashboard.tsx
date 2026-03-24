@@ -373,7 +373,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
                             ...p,
                             title: currentStoredMeta.title,
                             description: currentStoredMeta.description,
-                            tags: currentStoredMeta.tags
+                            tags: currentStoredMeta.tags,
+                            destinationLink: currentStoredMeta.destinationLink || p.destinationLink,
+                            board: currentStoredMeta.board || p.board
                         };
                     } else {
                         // Revert to original content for this "fresh" account slot
@@ -381,7 +383,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
                             ...p,
                             title: p.originalTitle || p.title,
                             description: p.originalDescription || p.description,
-                            tags: p.originalTags || p.tags
+                            tags: p.originalTags || p.tags,
+                            destinationLink: '',
+                            board: ''
                         };
                     }
                 }));

@@ -135,10 +135,7 @@ export function usePinProcessor({
                     finalPin.imageUrl = remixedImage;
                 }
 
-                finalPin.accountMetadata = {
-                    ...(finalPin.accountMetadata || {}),
-                    [accId]: { title: finalPin.title, description: finalPin.description, tags: finalPin.tags }
-                };
+                // Metadata assignment moved lower to capture destinationLink and board
 
                 if (destinationLink && destinationLink.trim() !== '') {
                     const base = destinationLink.trim();
@@ -181,6 +178,19 @@ export function usePinProcessor({
                 }
                 
                 finalPin.board = newBoardName;
+                
+                // SAVE TO METADATA (Capturing everything account-specific)
+                finalPin.accountMetadata = {
+                    ...(finalPin.accountMetadata || {}),
+                    [accId]: { 
+                        title: finalPin.title, 
+                        description: finalPin.description, 
+                        tags: finalPin.tags,
+                        destinationLink: finalPin.destinationLink,
+                        board: finalPin.board
+                    }
+                };
+
                 finalPin.status = 'ready'; 
 
                 setPins(prev => prev.map(p => p.id === pin.id ? finalPin : p));
@@ -247,10 +257,7 @@ export function usePinProcessor({
                 updatedPin.originalDescription = updatedPin.description;
                 updatedPin.originalTags = updatedPin.tags;
 
-                updatedPin.accountMetadata = {
-                    ...(updatedPin.accountMetadata || {}),
-                    [accId]: { title: updatedPin.title, description: updatedPin.description, tags: updatedPin.tags }
-                };
+                // Metadata assignment moved lower to capture destinationLink and board
 
                 // Determine Account-specific or Global Smart Link Settings
                 const pinAccountId = activeAccountId || (updatedPin.board ? boards.find(b => b.name === updatedPin.board)?.accountId : undefined);
@@ -299,6 +306,18 @@ export function usePinProcessor({
                 if (isStealthMode && updatedPin.imageUrl.startsWith('data:')) {
                     updatedPin.imageUrl = await applyStealthFilters(updatedPin.imageUrl);
                 }
+
+                // SAVE TO METADATA (Capturing everything account-specific)
+                updatedPin.accountMetadata = {
+                    ...(updatedPin.accountMetadata || {}),
+                    [accId]: { 
+                        title: updatedPin.title, 
+                        description: updatedPin.description, 
+                        tags: updatedPin.tags,
+                        destinationLink: updatedPin.destinationLink,
+                        board: updatedPin.board
+                    }
+                };
 
                 await trackUsage('aiCalls', 1, activeAccountId);
 

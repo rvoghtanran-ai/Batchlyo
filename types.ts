@@ -3,6 +3,8 @@ export interface PinMetadata {
   title: string;
   description: string;
   tags: string[];
+  destinationLink?: string;
+  board?: string;
 }
 
 export interface Pin {

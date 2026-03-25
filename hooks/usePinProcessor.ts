@@ -273,44 +273,42 @@ export function usePinProcessor({
                 const pinAccountId = activeAccountId || (updatedPin.board ? boards.find(b => b.name === updatedPin.board)?.accountId : undefined);
                 const smartLinkSettings = getSmartLinkSettings(pinAccountId);
                 let rawUrl = (destinationLink || '').trim();
+                const smartQuery = encodeURIComponent((searchTerm || extractKeyword(updatedPin.title)).trim());
 
-                if (!updatedPin.destinationLink) {
-                    if (smartLinkSettings.enabled && smartLinkSettings.baseUrl) {
-                        const query = encodeURIComponent((searchTerm || extractKeyword(updatedPin.title)).trim());
-                        const baseUrl = smartLinkSettings.baseUrl.replace(/\/$/, '');
-                        let generatedLink = '';
-                        
-                        if (isAutoSmartLink && query) {
-                            switch (smartLinkSettings.platform) {
-                                case 'wordpress': generatedLink = `${baseUrl}/?s=${query}`; break;
-                                case 'blogger': 
-                                case 'shopify': 
-                                case 'etsy': generatedLink = `${baseUrl}/search?q=${query}`; break;
-                                case 'custom': generatedLink = `${baseUrl}${smartLinkSettings.customPath}${query}`; break;
-                            }
-                        } else {
-                            // If auto-append is off, or no query, just use the bare Smart Link Base URL
-                            generatedLink = baseUrl;
-                        }
+                // Always regenerate the SmartLink on auto-fill to ensure keywords are injected
+                if (smartLinkSettings.enabled && smartLinkSettings.baseUrl) {
+                    const baseUrl = smartLinkSettings.baseUrl.replace(/\/$/, '');
+                    let generatedLink = '';
 
-                        if (generatedLink) {
-                            updatedPin.destinationLink = generateSmartUTM(generatedLink);
-                        } else if (rawUrl) {
-                            if (isAutoSmartLink && query) {
-                                const separator = rawUrl.includes('?') ? '&' : '?';
-                                updatedPin.destinationLink = generateSmartUTM(`${rawUrl}${separator}search=${query}`);
-                            } else {
-                                updatedPin.destinationLink = generateSmartUTM(rawUrl);
-                            }
+                    if (isAutoSmartLink && smartQuery) {
+                        switch (smartLinkSettings.platform) {
+                            case 'wordpress': generatedLink = `${baseUrl}/?s=${smartQuery}`; break;
+                            case 'blogger':
+                            case 'shopify':
+                            case 'etsy': generatedLink = `${baseUrl}/search?q=${smartQuery}`; break;
+                            case 'custom': generatedLink = `${baseUrl}${smartLinkSettings.customPath}${smartQuery}`; break;
                         }
+                    } else {
+                        // Auto-append is off — use bare base URL
+                        generatedLink = baseUrl;
+                    }
+
+                    if (generatedLink) {
+                        updatedPin.destinationLink = generateSmartUTM(generatedLink);
                     } else if (rawUrl) {
-                        if (isAutoSmartLink) {
-                            const query = encodeURIComponent((searchTerm || extractKeyword(updatedPin.title)).trim());
+                        if (isAutoSmartLink && smartQuery) {
                             const separator = rawUrl.includes('?') ? '&' : '?';
-                            updatedPin.destinationLink = `${rawUrl}${separator}search=${query}`;
+                            updatedPin.destinationLink = generateSmartUTM(`${rawUrl}${separator}search=${smartQuery}`);
                         } else {
-                            updatedPin.destinationLink = rawUrl;
+                            updatedPin.destinationLink = generateSmartUTM(rawUrl);
                         }
+                    }
+                } else if (rawUrl) {
+                    if (isAutoSmartLink && smartQuery) {
+                        const separator = rawUrl.includes('?') ? '&' : '?';
+                        updatedPin.destinationLink = `${rawUrl}${separator}search=${smartQuery}`;
+                    } else {
+                        updatedPin.destinationLink = rawUrl;
                     }
                 }
 

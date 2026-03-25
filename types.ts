@@ -24,6 +24,7 @@ export interface Pin {
   originalDescription?: string; // AI Source of Truth: Description
   originalTags?: string[]; // AI Source of Truth: Tags
   accountMetadata?: Record<string, PinMetadata>; // Mapping: accountId -> { title, description, tags }
+  aiSearchTerm?: string; // Persisted AI analyzed core keyword
   createdAt: number;
 }
 

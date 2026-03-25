@@ -18,6 +18,14 @@ const SPINNER_CTAS = [
 ];
 const SPINNER_ADJECTIVES = ["Amazing", "Stunning", "Simple", "Creative", "Unique", "Beautiful", "Awesome", "Great"];
 
+const extractKeyword = (text: string): string => {
+    if (!text) return 'idea';
+    const clean = text.replace(/[^\w\s]/gi, ''); // Remove symbols
+    const words = clean.split(/\s+/).filter(w => w.length > 3); // Significant words only
+    if (words.length > 0) return words[0].toLowerCase();
+    return clean.split(/\s+/)[0].toLowerCase();
+};
+
 export const remixTextLocal = (pin: Pin) => {
     let newTitle = pin.title;
     let newDesc = pin.description;
@@ -139,12 +147,14 @@ export function usePinProcessor({
 
                 if (destinationLink && destinationLink.trim() !== '') {
                     const base = destinationLink.trim();
-                    finalPin.destinationLink = smartLinkSettings.enabled ? generateSmartUTM(base) : base;
+                    const query = pin.aiSearchTerm || extractKeyword(finalPin.title);
+                    const separator = base.includes('?') ? '&' : '?';
+                    const finalBase = isAutoSmartLink ? `${base}${separator}search=${encodeURIComponent(query)}` : base;
+                    finalPin.destinationLink = smartLinkSettings.enabled ? generateSmartUTM(finalBase) : finalBase;
                 } else if (smartLinkSettings.enabled && smartLinkSettings.baseUrl) {
-                    const queryText = finalPin.title || finalPin.description || 'pin';
-                    const query = encodeURIComponent(queryText.split(' ').slice(0, 5).join(' ')); 
-                    let generatedLink = '';
+                    const query = pin.aiSearchTerm || extractKeyword(finalPin.title);
                     const baseUrl = smartLinkSettings.baseUrl.replace(/\/$/, '');
+                    let generatedLink = '';
                     switch (smartLinkSettings.platform) {
                         case 'wordpress': generatedLink = `${baseUrl}/?s=${query}`; break;
                         case 'blogger': 
@@ -256,8 +266,8 @@ export function usePinProcessor({
                 updatedPin.originalTitle = updatedPin.title;
                 updatedPin.originalDescription = updatedPin.description;
                 updatedPin.originalTags = updatedPin.tags;
+                updatedPin.aiSearchTerm = searchTerm;
 
-                // Metadata assignment moved lower to capture destinationLink and board
 
                 // Determine Account-specific or Global Smart Link Settings
                 const pinAccountId = activeAccountId || (updatedPin.board ? boards.find(b => b.name === updatedPin.board)?.accountId : undefined);
@@ -266,7 +276,7 @@ export function usePinProcessor({
 
                 if (!updatedPin.destinationLink) {
                     if (smartLinkSettings.enabled && smartLinkSettings.baseUrl) {
-                        const query = encodeURIComponent((searchTerm || updatedPin.title || 'pin').trim());
+                        const query = encodeURIComponent((searchTerm || extractKeyword(updatedPin.title)).trim());
                         const baseUrl = smartLinkSettings.baseUrl.replace(/\/$/, '');
                         let generatedLink = '';
                         
@@ -294,9 +304,10 @@ export function usePinProcessor({
                             }
                         }
                     } else if (rawUrl) {
-                        if (isAutoSmartLink && searchTerm) {
+                        if (isAutoSmartLink) {
+                            const query = encodeURIComponent((searchTerm || extractKeyword(updatedPin.title)).trim());
                             const separator = rawUrl.includes('?') ? '&' : '?';
-                            updatedPin.destinationLink = `${rawUrl}${separator}search=${encodeURIComponent(searchTerm.trim())}`;
+                            updatedPin.destinationLink = `${rawUrl}${separator}search=${query}`;
                         } else {
                             updatedPin.destinationLink = rawUrl;
                         }

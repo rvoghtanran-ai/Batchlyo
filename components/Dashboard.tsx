@@ -130,7 +130,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isAdmin, onLogout }) => {
   // Active injected keywords shown as a banner in the queue
   const [activeKeywords, setActiveKeywords] = useState<string[]>([]);
 
-  const [isAutoSmartLink, setIsAutoSmartLink] = useState(false); 
+  const [isAutoSmartLink, setIsAutoSmartLinkState] = useState(() => {
+    return localStorage.getItem('pinlly_autoSmartLink') === 'true';
+  });
+  const setIsAutoSmartLink = (val: boolean) => {
+    localStorage.setItem('pinlly_autoSmartLink', String(val));
+    setIsAutoSmartLinkState(val);
+  };
 
   const {
       isProcessingAI,

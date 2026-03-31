@@ -56,7 +56,7 @@ async function startServer() {
             res.status(500).json({ error: error.message });
         }
     });
-    // Pinterest Keyword Research Proxy — uses Google Autocomplete to get real search suggestions
+    // Pinterest Keyword Research Proxy - uses Google Autocomplete to get real search suggestions
     app.get("/api/pinterest/keywords", async (req, res) => {
         try {
             const seed = (req.query.q || '').trim();
@@ -111,7 +111,7 @@ async function startServer() {
             res.status(500).json({ error: error.message });
         }
     });
-    // Pinterest Profile Scraper — extracts real profile stats + recent pins
+    // Pinterest Profile Scraper - extracts real profile stats + recent pins
     app.get("/api/pinterest/profile", async (req, res) => {
         try {
             const username = (req.query.username || '').trim().replace(/^@/, '').replace(/\/$/, '');
@@ -219,6 +219,152 @@ async function startServer() {
             res.status(500).json({ error: error.message });
         }
     });
+    // ??? LIVE VISITOR TRACKING ????????????????????????????????????????????????
+    // In-memory session store: sessionId ? session data
+    const visitorSessions = new Map();
+    // IP geolocation cache so we don't hammer ip-api.com
+    const geoCache = new Map();
+
+    // Resolve IP ? { country, countryCode, city, flag }
+    async function resolveGeo(ip) {
+        // Skip private/local IPs
+        if (!ip || ip === '::1' || ip === '127.0.0.1' || ip.startsWith('192.168') || ip.startsWith('10.') || ip.startsWith('::ffff:127')) {
+            return { country: 'Local', countryCode: 'LO', city: 'localhost', flag: '??' };
+        }
+        if (geoCache.has(ip)) return geoCache.get(ip);
+
+        try {
+            const resp = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,city`);
+            if (!resp.ok) throw new Error('geo failed');
+            const data = await resp.json();
+            if (data.status !== 'success') throw new Error('geo status fail');
+
+            // Map country code to flag emoji
+            const flag = data.countryCode
+                ? data.countryCode.toUpperCase().replace(/./g, (c) => String.fromCodePoint(c.charCodeAt(0) + 127397))
+                : '??';
+
+            const geo = { country: data.country || 'Unknown', countryCode: data.countryCode || '??', city: data.city || 'Unknown', flag };
+            geoCache.set(ip, geo);
+            // Cache for 24h
+            setTimeout(() => geoCache.delete(ip), 24 * 60 * 60 * 1000);
+            return geo;
+        } catch {
+            const fallback = { country: 'Unknown', countryCode: '??', city: 'Unknown', flag: '??' };
+            geoCache.set(ip, fallback);
+            return fallback;
+        }
+    }
+
+    // POST /api/visitors/heartbeat - called by client every 15s
+    app.post('/api/visitors/heartbeat', async (req, res) => {
+        try {
+            const { sessionId, page, device, startTime, userAgent, referrer, language, screenWidth } = req.body;
+            if (!sessionId) return res.status(400).json({ error: 'Missing sessionId' });
+
+            const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+            const now = Date.now();
+
+            // Get existing session or create new one
+            const existing = visitorSessions.get(sessionId);
+            let geo = existing?.geo;
+            if (!geo) {
+                geo = await resolveGeo(ip);
+            }
+
+            visitorSessions.set(sessionId, {
+                sessionId,
+                ip,
+                geo,
+                page: page || '/',
+                device: device || 'desktop',
+                startTime: existing?.startTime || startTime || now,
+                lastSeen: now,
+                userAgent: userAgent || '',
+                referrer: referrer || '',
+                language: language || 'en',
+                screenWidth: screenWidth || 0,
+            });
+
+            res.json({ ok: true });
+        } catch (err) {
+            console.error('Heartbeat error:', err);
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // GET /api/visitors/live - returns all active sessions (seen in last 90s)
+    app.get('/api/visitors/live', (req, res) => {
+        const now = Date.now();
+        const ACTIVE_THRESHOLD = 90_000; // 90 seconds
+        const IDLE_THRESHOLD = 30_000;   // idle if no heartbeat for 30s
+
+        const active = [];
+        for (const [id, session] of visitorSessions.entries()) {
+            if (now - session.lastSeen > ACTIVE_THRESHOLD) {
+                visitorSessions.delete(id); // Prune stale sessions
+                continue;
+            }
+            const durationMs = now - session.startTime;
+            active.push({
+                sessionId: session.sessionId,
+                country: session.geo?.country || 'Unknown',
+                countryCode: session.geo?.countryCode || '??',
+                city: session.geo?.city || 'Unknown',
+                flag: session.geo?.flag || '??',
+                page: session.page,
+                device: session.device,
+                language: session.language,
+                screenWidth: session.screenWidth,
+                referrer: session.referrer,
+                durationMs,
+                durationFormatted: formatDuration(durationMs),
+                lastSeen: session.lastSeen,
+                secondsAgo: Math.floor((now - session.lastSeen) / 1000),
+                isIdle: (now - session.lastSeen) > IDLE_THRESHOLD,
+            });
+        }
+
+        // Sort: active first, then by session duration desc
+        active.sort((a, b) => {
+            if (a.isIdle !== b.isIdle) return a.isIdle ? 1 : -1;
+            return b.durationMs - a.durationMs;
+        });
+
+        // Aggregate stats
+        const countries = [...new Set(active.map(s => s.country))];
+        const avgDuration = active.length > 0
+            ? Math.floor(active.reduce((sum, s) => sum + s.durationMs, 0) / active.length)
+            : 0;
+        const pageFreq = {};
+        for (const s of active) pageFreq[s.page] = (pageFreq[s.page] || 0) + 1;
+        const topPage = Object.entries(pageFreq).sort((a, b) => b[1] - a[1])[0]?.[0] || '/';
+
+        res.json({
+            sessions: active,
+            stats: {
+                liveCount: active.length,
+                countriesCount: countries.length,
+                countries,
+                avgDurationMs: avgDuration,
+                avgDurationFormatted: formatDuration(avgDuration),
+                topPage,
+            },
+            timestamp: now,
+        });
+    });
+
+    function formatDuration(ms) {
+        const totalSeconds = Math.floor(ms / 1000);
+        const h = Math.floor(totalSeconds / 3600);
+        const m = Math.floor((totalSeconds % 3600) / 60);
+        const s = totalSeconds % 60;
+        if (h > 0) return `${h}h ${m}m ${s}s`;
+        if (m > 0) return `${m}m ${s}s`;
+        return `${s}s`;
+    }
+    // ??? END LIVE VISITOR TRACKING ????????????????????????????????????????????
+
     const isProduction = process.env.NODE_ENV === "production" || process.env.NODE_ENV === "prod";
     const distExists = fs.existsSync(path.join(__dirname, "dist", "index.html"));
     // Vite middleware for development

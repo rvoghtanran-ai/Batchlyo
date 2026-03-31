@@ -15,6 +15,7 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { GlobalSettings } from './types';
+import { useVisitorTracking } from './hooks/useVisitorTracking';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -148,25 +149,34 @@ service cloud.firestore {
 
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/dashboard" element={user ? <Dashboard user={user} isAdmin={isAdmin} onLogout={() => auth.signOut()} /> : <Navigate to="/auth" />} />
-        <Route path="/admin" element={user && isAdmin ? <AdminPage user={user} /> : <Navigate to="/dashboard" />} />
-        <Route path="/auth" element={user ? <Navigate to="/dashboard" /> : <AuthPage />} />
-        <Route path="/pricing" element={<PricingPage />} />
-        <Route path="/blog" element={<BlogPage />} />
-        <Route path="/blog/:slug" element={<BlogPost />} />
-        <Route path="/docs" element={<InfoPage type="docs" />} />
-        <Route path="/api" element={<InfoPage type="api" />} />
-        <Route path="/support" element={<InfoPage type="support" />} />
-        <Route path="/workflow" element={<InfoPage type="workflow" />} />
-        <Route path="/privacy" element={<InfoPage type="privacy" />} />
-        <Route path="/terms" element={<InfoPage type="terms" />} />
-        <Route path="/contact" element={<InfoPage type="contact" />} />
-        <Route path="/about" element={<InfoPage type="about" />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <AppRoutes user={user} isAdmin={isAdmin} />
     </BrowserRouter>
+  );
+};
+
+// Inner component so useVisitorTracking can access BrowserRouter context
+const AppRoutes: React.FC<{ user: any; isAdmin: boolean }> = ({ user, isAdmin }) => {
+  useVisitorTracking();
+
+  return (
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/dashboard" element={user ? <Dashboard user={user} isAdmin={isAdmin} onLogout={() => auth.signOut()} /> : <Navigate to="/auth" />} />
+      <Route path="/admin" element={user && isAdmin ? <AdminPage user={user} /> : <Navigate to="/dashboard" />} />
+      <Route path="/auth" element={user ? <Navigate to="/dashboard" /> : <AuthPage />} />
+      <Route path="/pricing" element={<PricingPage />} />
+      <Route path="/blog" element={<BlogPage />} />
+      <Route path="/blog/:slug" element={<BlogPost />} />
+      <Route path="/docs" element={<InfoPage type="docs" />} />
+      <Route path="/api" element={<InfoPage type="api" />} />
+      <Route path="/support" element={<InfoPage type="support" />} />
+      <Route path="/workflow" element={<InfoPage type="workflow" />} />
+      <Route path="/privacy" element={<InfoPage type="privacy" />} />
+      <Route path="/terms" element={<InfoPage type="terms" />} />
+      <Route path="/contact" element={<InfoPage type="contact" />} />
+      <Route path="/about" element={<InfoPage type="about" />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
   );
 };
 

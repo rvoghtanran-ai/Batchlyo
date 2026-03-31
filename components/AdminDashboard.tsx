@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Shield, Download, Upload, Trash2, Database, Users, Activity, CheckCircle, AlertTriangle, FileJson, Lock, UserCheck, UserX, Search, RefreshCw, Server, CreditCard, BarChart2, Calendar, Crown, Briefcase, ArrowUp, DollarSign, Save, Edit3, Plus, Sparkles } from 'lucide-react';
+import { X, Shield, Download, Upload, Trash2, Database, Users, Activity, CheckCircle, AlertTriangle, FileJson, Lock, UserCheck, UserX, Search, RefreshCw, Server, CreditCard, BarChart2, Calendar, Crown, Briefcase, ArrowUp, DollarSign, Save, Edit3, Plus, Sparkles, Globe, Wifi, Monitor, Smartphone, Tablet, Clock, MapPin, TrendingUp } from 'lucide-react';
 import { db } from '../services/firebase';
 import { collection, getDocs, doc, updateDoc, getDoc, setDoc, addDoc, deleteDoc } from 'firebase/firestore';
 import { UserProfile, UserSubscription, GlobalSettings, UserRole } from '../types';
@@ -14,7 +14,7 @@ interface AdminDashboardProps {
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose, onReset, currentUserUid }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'system' | 'blog'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'system' | 'blog' | 'visitors'>('overview');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(false);
@@ -53,6 +53,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose, onRese
   const [paypal, setPaypal] = useState<{email?: string, clientId?: string}>({});
   const [savingSystem, setSavingSystem] = useState(false);
 
+  // Live Visitors State
+  const [visitorData, setVisitorData] = useState<any>(null);
+  const [visitorLoading, setVisitorLoading] = useState(false);
+  const [visitorsLastRefresh, setVisitorsLastRefresh] = useState<number>(0);
+  const [visitorsCountdown, setVisitorsCountdown] = useState(10);
+  const [tickingDurations, setTickingDurations] = useState<Record<string, number>>({});
+
   useEffect(() => {
      if (isOpen) {
          fetchUsers();
@@ -60,6 +67,74 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose, onRese
          fetchBlogPosts();
      }
   }, [isOpen]);
+
+  // Fetch live visitor data
+  const fetchVisitors = async () => {
+      setVisitorLoading(true);
+      try {
+          const resp = await fetch('/api/visitors/live');
+          if (resp.ok) {
+              const data = await resp.json();
+              setVisitorData(data);
+              setVisitorsLastRefresh(Date.now());
+              setVisitorsCountdown(10);
+              // Seed ticking durations from server data
+              const durations: Record<string, number> = {};
+              for (const s of data.sessions || []) {
+                  durations[s.sessionId] = s.durationMs;
+              }
+              setTickingDurations(durations);
+          }
+      } catch (e) {
+          console.warn('Could not fetch live visitors', e);
+      } finally {
+          setVisitorLoading(false);
+      }
+  };
+
+  // Auto-poll visitor data every 10s when on the visitors tab
+  useEffect(() => {
+      if (!isOpen || activeTab !== 'visitors') return;
+      fetchVisitors();
+      const pollInterval = setInterval(fetchVisitors, 10_000);
+      return () => clearInterval(pollInterval);
+  }, [isOpen, activeTab]);
+
+  // Countdown timer
+  useEffect(() => {
+      if (activeTab !== 'visitors') return;
+      const tick = setInterval(() => setVisitorsCountdown(c => Math.max(0, c - 1)), 1000);
+      return () => clearInterval(tick);
+  }, [activeTab, visitorsLastRefresh]);
+
+  // Live-tick session durations every second
+  useEffect(() => {
+      if (activeTab !== 'visitors') return;
+      const ticker = setInterval(() => {
+          setTickingDurations(prev => {
+              const next = { ...prev };
+              for (const key of Object.keys(next)) next[key] = next[key] + 1000;
+              return next;
+          });
+      }, 1000);
+      return () => clearInterval(ticker);
+  }, [activeTab]);
+
+  const formatMs = (ms: number) => {
+      const s = Math.floor(ms / 1000);
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const sec = s % 60;
+      if (h > 0) return `${h}h ${m}m ${sec}s`;
+      if (m > 0) return `${m}m ${sec}s`;
+      return `${sec}s`;
+  };
+
+  const getDeviceIcon = (device: string) => {
+      if (device === 'mobile') return <Smartphone className="w-3 h-3" />;
+      if (device === 'tablet') return <Tablet className="w-3 h-3" />;
+      return <Monitor className="w-3 h-3" />;
+  };
 
   const fetchBlogPosts = async () => {
       try {
@@ -181,7 +256,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose, onRese
                   date: Date.now() - 86400000,
                   published: true,
                   imageUrl: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?q=80&w=1200&auto=format&fit=crop",
-                  content: `# The Print-on-Demand (POD) industry is booming\n\nBut it's also incredibly saturated. Whether you are selling t-shirts through Shopify, mugs on Etsy, or canvases on WooCommerce, the barrier to entry is nearly zero.\n\nBecause everyone has access to the exact same Printify or Printful mockups, simply listing your product isn't enough anymore. **You need visual volume and variety.**\n\n## The Problem with Standard Mockups\n\nWhen a potential buyer searches for a "vintage cat t-shirt" on Pinterest, they are going to see hundreds of identical flat-lay mockups. If your pin looks exactly like your competitor's pin, you are competing solely on price—a race to the bottom.\n\nFurthermore, Pinterest is a visual search engine. It relies heavily on image diversity to understand context and serve content to a wide array of user intents.\n\n## The Solution: Pinlly's Generation Workstation\n\nThis is where **Pinlly** completely changes the game for POD sellers.\n\nInstead of paying a designer to create 50 different lifestyle mockups for a single t-shirt design, you can use Pinlly to generate an entire content ecosystem around that one product.\n\n![E-commerce Growth](https://images.unsplash.com/photo-1661956602116-aa6865609028?q=80&w=1200&auto=format&fit=crop)\n*Scaling your visual assets is the key to breaking through the noise in 2026.*\n\n### How to Dominate a Niche in 3 Steps\n\n1.  **Input Your Base Design:** Upload your raw design file (PNG/JPG) directly into the Pinlly workstation.\n2.  **Generate AI Variations:** Use Pinlly's integrated Image Generation (powered by elite models) to prompt for lifestyle images.\n    *   *Example Prompt: "A stylish woman wearing a white t-shirt with [My Design] sitting in a trendy coffee shop, cinematic lighting."*\n3.  **Bulk Optimize:** Select all your generated lifestyle images. Click "Remix" to instantly apply spinning text from your content pool (e.g., swapping "vintage cat tee" with "retro kitten shirt").\n\nYou just turned one design into 20 unique pins, all pointing back to the same product URL (automatically tagged with Smart UTMs to track exactly which image drove the sale).\n\n### The Agency Advantage\n\nIf you run a marketing agency handling multiple POD clients, Pinlly allows you to create separate "Workspaces" for each client. You can isolate their APIs, webhooks, and content pools, ensuring that client A's data never mixes with client B's.\n\nIt's time to stop fighting over scraps with identical mockups. Flood the feed with beautiful, algorithm-pleasing variations using Pinlly.`
+                  content: `# The Print-on-Demand (POD) industry is booming\n\nBut it's also incredibly saturated. Whether you are selling t-shirts through Shopify, mugs on Etsy, or canvases on WooCommerce, the barrier to entry is nearly zero.\n\nBecause everyone has access to the exact same Printify or Printful mockups, simply listing your product isn't enough anymore. **You need visual volume and variety.**\n\n## The Problem with Standard Mockups\n\nWhen a potential buyer searches for a "vintage cat t-shirt" on Pinterest, they are going to see hundreds of identical flat-lay mockups. If your pin looks exactly like your competitor's pin, you are competing solely on price-a race to the bottom.\n\nFurthermore, Pinterest is a visual search engine. It relies heavily on image diversity to understand context and serve content to a wide array of user intents.\n\n## The Solution: Pinlly's Generation Workstation\n\nThis is where **Pinlly** completely changes the game for POD sellers.\n\nInstead of paying a designer to create 50 different lifestyle mockups for a single t-shirt design, you can use Pinlly to generate an entire content ecosystem around that one product.\n\n![E-commerce Growth](https://images.unsplash.com/photo-1661956602116-aa6865609028?q=80&w=1200&auto=format&fit=crop)\n*Scaling your visual assets is the key to breaking through the noise in 2026.*\n\n### How to Dominate a Niche in 3 Steps\n\n1.  **Input Your Base Design:** Upload your raw design file (PNG/JPG) directly into the Pinlly workstation.\n2.  **Generate AI Variations:** Use Pinlly's integrated Image Generation (powered by elite models) to prompt for lifestyle images.\n    *   *Example Prompt: "A stylish woman wearing a white t-shirt with [My Design] sitting in a trendy coffee shop, cinematic lighting."*\n3.  **Bulk Optimize:** Select all your generated lifestyle images. Click "Remix" to instantly apply spinning text from your content pool (e.g., swapping "vintage cat tee" with "retro kitten shirt").\n\nYou just turned one design into 20 unique pins, all pointing back to the same product URL (automatically tagged with Smart UTMs to track exactly which image drove the sale).\n\n### The Agency Advantage\n\nIf you run a marketing agency handling multiple POD clients, Pinlly allows you to create separate "Workspaces" for each client. You can isolate their APIs, webhooks, and content pools, ensuring that client A's data never mixes with client B's.\n\nIt's time to stop fighting over scraps with identical mockups. Flood the feed with beautiful, algorithm-pleasing variations using Pinlly.`
               },
               {
                   title: "n8n + Pinlly: Building a 100% Autonomous Publishing Machine",
@@ -416,6 +491,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose, onRese
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === 'blog' ? 'bg-card text-text-main shadow-sm' : 'text-text-muted hover:text-text-main hover:bg-card/50'}`}
                 >
                     <Edit3 className="w-4 h-4" /> Blog Management
+                </button>
+                <button 
+                    onClick={() => setActiveTab('visitors')}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all relative ${activeTab === 'visitors' ? 'bg-card text-text-main shadow-sm' : 'text-text-muted hover:text-text-main hover:bg-card/50'}`}
+                >
+                    <Globe className="w-4 h-4" />
+                    Live Visitors
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
                 </button>
             </div>
 
@@ -1137,6 +1223,210 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose, onRese
                                 </table>
                             </div>
                         )}
+                    </div>
+                )}
+
+                {/* --- LIVE VISITORS TAB --- */}
+                {activeTab === 'visitors' && (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+
+                        {/* Header */}
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <h3 className="text-xl font-bold text-text-main flex items-center gap-2">
+                                    <Globe className="w-5 h-5 text-emerald-400" />
+                                    Live Visitors
+                                    <span className="flex h-2.5 w-2.5 ml-1">
+                                        <span className="animate-ping absolute inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                                    </span>
+                                </h3>
+                                <p className="text-sm text-text-muted mt-1">Real-time visitors currently browsing your site</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="text-xs text-text-muted font-mono bg-panel border border-border px-3 py-2 rounded-lg flex items-center gap-2">
+                                    <Clock className="w-3 h-3" />
+                                    Refresh in <span className={`font-bold ${visitorsCountdown <= 3 ? 'text-emerald-400' : 'text-text-main'}`}>{visitorsCountdown}s</span>
+                                </div>
+                                <button
+                                    onClick={fetchVisitors}
+                                    disabled={visitorLoading}
+                                    className="p-2.5 bg-panel border border-border rounded-xl hover:text-text-main text-text-muted hover:border-emerald-500/30 transition-all"
+                                >
+                                    <RefreshCw className={`w-4 h-4 ${visitorLoading ? 'animate-spin text-emerald-400' : ''}`} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Stats Cards */}
+                        <div className="grid grid-cols-4 gap-4">
+                            <div className="bg-panel border border-border rounded-2xl p-5 relative overflow-hidden group">
+                                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent rounded-2xl" />
+                                <p className="text-text-muted text-[10px] font-bold uppercase tracking-wider mb-1">Live Now</p>
+                                <h3 className="text-3xl font-bold text-emerald-400">{visitorData?.stats?.liveCount ?? '-'}</h3>
+                                <p className="text-[10px] text-text-muted mt-1 font-mono flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    Active sessions
+                                </p>
+                            </div>
+                            <div className="bg-panel border border-border rounded-2xl p-5 relative overflow-hidden">
+                                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent rounded-2xl" />
+                                <p className="text-text-muted text-[10px] font-bold uppercase tracking-wider mb-1">Countries</p>
+                                <h3 className="text-3xl font-bold text-blue-400">{visitorData?.stats?.countriesCount ?? '-'}</h3>
+                                <p className="text-[10px] text-text-muted mt-1 font-mono truncate">
+                                    {visitorData?.stats?.countries?.slice(0, 3).join(', ') || 'No visitors yet'}
+                                </p>
+                            </div>
+                            <div className="bg-panel border border-border rounded-2xl p-5 relative overflow-hidden">
+                                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent rounded-2xl" />
+                                <p className="text-text-muted text-[10px] font-bold uppercase tracking-wider mb-1">Avg. Session</p>
+                                <h3 className="text-3xl font-bold text-purple-400">{visitorData?.stats?.avgDurationFormatted || '-'}</h3>
+                                <p className="text-[10px] text-text-muted mt-1 font-mono">Average time on site</p>
+                            </div>
+                            <div className="bg-panel border border-border rounded-2xl p-5 relative overflow-hidden">
+                                <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-transparent rounded-2xl" />
+                                <p className="text-text-muted text-[10px] font-bold uppercase tracking-wider mb-1">Top Page</p>
+                                <h3 className="text-xl font-bold text-orange-400 truncate font-mono">{visitorData?.stats?.topPage || '-'}</h3>
+                                <p className="text-[10px] text-text-muted mt-1 font-mono">Most visited right now</p>
+                            </div>
+                        </div>
+
+                        {/* Live Feed Table */}
+                        <div className="bg-panel border border-border rounded-2xl overflow-hidden">
+                            <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+                                <h4 className="text-sm font-bold text-text-main flex items-center gap-2">
+                                    <Wifi className="w-4 h-4 text-emerald-400" />
+                                    Active Sessions
+                                </h4>
+                                <span className="text-[10px] text-text-muted font-mono">Updated {visitorsLastRefresh ? new Date(visitorsLastRefresh).toLocaleTimeString() : '-'}</span>
+                            </div>
+
+                            {!visitorData || visitorData.sessions.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-20 text-center">
+                                    <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-4">
+                                        <Globe className="w-8 h-8 text-emerald-500/50" />
+                                    </div>
+                                    <p className="text-text-muted font-bold">No active visitors</p>
+                                    <p className="text-text-muted text-xs mt-1">Visitors will appear here as they browse your site</p>
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left">
+                                        <thead>
+                                            <tr className="border-b border-border">
+                                                <th className="px-4 py-3 text-[10px] font-bold text-text-muted uppercase tracking-wider">Location</th>
+                                                <th className="px-4 py-3 text-[10px] font-bold text-text-muted uppercase tracking-wider">Current Page</th>
+                                                <th className="px-4 py-3 text-[10px] font-bold text-text-muted uppercase tracking-wider">Device</th>
+                                                <th className="px-4 py-3 text-[10px] font-bold text-text-muted uppercase tracking-wider">Session Time</th>
+                                                <th className="px-4 py-3 text-[10px] font-bold text-text-muted uppercase tracking-wider">Last Seen</th>
+                                                <th className="px-4 py-3 text-[10px] font-bold text-text-muted uppercase tracking-wider">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {visitorData.sessions.map((session: any, i: number) => (
+                                                <tr key={session.sessionId} className={`border-b border-border/40 hover:bg-white/[0.02] transition-colors ${i % 2 === 0 ? 'bg-black/10' : ''}`}>
+                                                    {/* Location */}
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-2xl leading-none" title={session.country}>{session.flag}</span>
+                                                            <div>
+                                                                <p className="text-xs font-bold text-text-main">{session.country}</p>
+                                                                <p className="text-[10px] text-text-muted flex items-center gap-0.5">
+                                                                    <MapPin className="w-2.5 h-2.5" />{session.city}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    {/* Current Page */}
+                                                    <td className="px-4 py-3">
+                                                        <span className="text-xs font-mono text-accent-blue bg-accent-blue/10 px-2 py-0.5 rounded border border-accent-blue/20 truncate max-w-[140px] block">
+                                                            {session.page}
+                                                        </span>
+                                                    </td>
+                                                    {/* Device */}
+                                                    <td className="px-4 py-3">
+                                                        <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                                                            session.device === 'mobile' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
+                                                            session.device === 'tablet' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
+                                                            'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                                                        }`}>
+                                                            {getDeviceIcon(session.device)}
+                                                            {session.device}
+                                                        </div>
+                                                    </td>
+                                                    {/* Session Duration - live ticking */}
+                                                    <td className="px-4 py-3">
+                                                        <span className="text-xs font-mono font-bold text-text-main tabular-nums">
+                                                            {formatMs(tickingDurations[session.sessionId] ?? session.durationMs)}
+                                                        </span>
+                                                    </td>
+                                                    {/* Last Seen */}
+                                                    <td className="px-4 py-3">
+                                                        <span className="text-[10px] text-text-muted font-mono">
+                                                            {session.secondsAgo < 5 ? 'just now' : `${session.secondsAgo}s ago`}
+                                                        </span>
+                                                    </td>
+                                                    {/* Status */}
+                                                    <td className="px-4 py-3">
+                                                        {session.isIdle ? (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border bg-yellow-500/10 text-yellow-400 border-yellow-500/20">
+                                                                Idle
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold border bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                                                Active
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Country Breakdown */}
+                        {visitorData && visitorData.sessions.length > 0 && (() => {
+                            const countryFreq: Record<string, { count: number; flag: string }> = {};
+                            for (const s of visitorData.sessions) {
+                                if (!countryFreq[s.country]) countryFreq[s.country] = { count: 0, flag: s.flag };
+                                countryFreq[s.country].count++;
+                            }
+                            const sorted = Object.entries(countryFreq).sort((a, b) => b[1].count - a[1].count);
+                            const total = visitorData.sessions.length;
+                            return (
+                                <div className="bg-panel border border-border rounded-2xl p-6">
+                                    <h4 className="text-sm font-bold text-text-main mb-4 flex items-center gap-2">
+                                        <TrendingUp className="w-4 h-4 text-blue-400" /> Visitor Distribution by Country
+                                    </h4>
+                                    <div className="space-y-3">
+                                        {sorted.map(([country, { count, flag }]) => {
+                                            const pct = Math.round((count / total) * 100);
+                                            return (
+                                                <div key={country} className="flex items-center gap-3">
+                                                    <span className="text-xl w-7 text-center">{flag}</span>
+                                                    <div className="flex-1">
+                                                        <div className="flex justify-between text-xs mb-1">
+                                                            <span className="font-bold text-text-main">{country}</span>
+                                                            <span className="text-text-muted font-mono">{count} visitor{count !== 1 ? 's' : ''} ({pct}%)</span>
+                                                        </div>
+                                                        <div className="h-1.5 w-full bg-black/30 rounded-full overflow-hidden">
+                                                            <div
+                                                                className="h-full bg-gradient-to-r from-emerald-500 to-blue-500 rounded-full transition-all duration-700"
+                                                                style={{ width: `${pct}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
                     </div>
                 )}
 

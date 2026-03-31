@@ -1,0 +1,177 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pinlly - Ultimate Pinterest Automation</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%238b5cf6'/%3E%3Cpath d='M30 15 L70 15 L90 50 L70 85 L30 85 L10 50 Z' stroke='white' stroke-width='8' stroke-linejoin='round' fill='white' fill-opacity='0.15'/%3E%3Cpath d='M30 50 L70 50 M50 25 L50 75' stroke='white' stroke-width='8' stroke-linecap='round'/%3E%3Ccircle cx='50' cy='50' r='14' fill='white'/%3E%3Ccircle cx='30' cy='50' r='6' fill='white'/%3E%3Ccircle cx='70' cy='50' r='6' fill='white'/%3E%3Ccircle cx='50' cy='25' r='6' fill='white'/%3E%3Ccircle cx='50' cy='75' r='6' fill='white'/%3E%3C/svg%3E">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+            colors: {
+              main: 'var(--bg-main)',
+              panel: 'var(--bg-panel)',
+              card: 'var(--bg-card)',
+              border: 'var(--border-color)',
+              text: {
+                main: 'var(--text-main)',
+                muted: 'var(--text-muted)',
+              },
+              charcoal: {
+                950: '#0a0a0c',
+                900: '#0f0f12',
+                800: '#15151a',
+                700: '#1e1e24',
+              },
+              accent: {
+                red: '#ff5c73',     /* Screenshot Exact Red */
+                redHover: '#e0495f',
+                green: '#5fb07d',   /* Screenshot Exact Green */
+                greenHover: '#4e9969',
+                yellow: '#ffb74d',  /* Screenshot Exact Yellow */
+                blue: '#3b82f6',
+                purple: '#8b5cf6',
+              }
+            },
+            animation: {
+              'fade-in': 'fadeIn 0.3s ease-out',
+              'slide-up': 'slideUp 0.4s ease-out',
+            },
+            keyframes: {
+              fadeIn: {
+                '0%': { opacity: '0' },
+                '100%': { opacity: '1' },
+              },
+              slideUp: {
+                '0%': { transform: 'translateY(10px)', opacity: '0' },
+                '100%': { transform: 'translateY(0)', opacity: '1' },
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      :root {
+        /* Softer, "Cute Pro" Dark Mode */
+        --bg-main: #0d1117;   /* Soft dark slate */
+        --bg-panel: #161b22;  /* Slightly lighter slate for panels */
+        --bg-card: #21262d;   /* Cards */
+        --border-color: rgba(255, 255, 255, 0.08); /* Soft borders */
+        --text-main: #f0f6fc; /* Bright, soft white */
+        --text-muted: #8b949e; /* Softer gray */
+        
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --glass-bg: rgba(22, 27, 34, 0.7);
+        --neon-shadow: 0 4px 20px rgba(0, 0, 0, 0.4); /* Softer drop shadow */
+      }
+
+      /* Light Mode Overrides: 1:1 Screenshot Exact Match */
+      html.light {
+        --bg-main: #f4f5f6; /* Very soft beige/grey blend that matches screenshot */
+        --bg-panel: #f4f5f6; /* Match main background */
+        --bg-card: #f4f5f6; /* Match main background */
+        --border-color: rgba(0, 0, 0, 0.05); /* Very subtle borders against uniform beige */
+        --text-main: #111827; /* Near black for maximum contrast */
+        --text-muted: #374151; /* Darker slate gray for better readability */
+        
+        --glass-border: rgba(0, 0, 0, 0.08);
+        --glass-bg: rgba(255, 255, 255, 0.9);
+        --neon-shadow: 0 4px 20px rgba(0, 0, 0, 0.06); 
+      }
+
+      html.light body,
+      html.light input,
+      html.light textarea,
+      html.light select,
+      html.light button {
+        font-weight: 600; /* Thicker base font weight everywhere for readability */
+        color: var(--text-main);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      /* Make headings even thicker in light mode */
+      html.light h1, html.light h2, html.light h3, html.light h4, html.light h5, html.light h6 {
+         font-weight: 800;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        background-color: var(--bg-main);
+        color: var(--text-main);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        min-height: 100vh;
+        overflow-y: auto; /* Allow scroll */
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+
+      /* Elite Scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: var(--bg-panel); 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #333; 
+        border-radius: 3px;
+        border: 1px solid var(--bg-panel);
+      }
+      html.light ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border: 1px solid var(--bg-panel);
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #555; 
+      }
+      html.light ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+
+      /* Utilities */
+      .glass-panel {
+        background: var(--glass-bg);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--glass-border);
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+      }
+      
+      .text-gradient {
+        background: linear-gradient(to right, #fff, #9ca3af);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      /* Hide number input spinners */
+      input[type=number]::-webkit-inner-spin-button, 
+      input[type=number]::-webkit-outer-spin-button { 
+        -webkit-appearance: none; 
+        margin: 0; 
+      }
+    </style>
+    <script type="module" crossorigin src="/assets/index-DNGpF4rF.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      (function(){var k='pinlly_sid',s=sessionStorage.getItem(k);if(!s){s=Date.now()+'-'+Math.random().toString(36).slice(2,10);sessionStorage.setItem(k,s);}var t=Date.now();function d(){var u=navigator.userAgent;if(/tablet|ipad/i.test(u))return'tablet';if(/mobile|iphone|android.*mobile/i.test(u))return'mobile';return'desktop';}function hb(){var p=JSON.stringify({sessionId:s,page:location.pathname,device:d(),startTime:t,userAgent:navigator.userAgent,referrer:document.referrer||'',language:navigator.language||'en',screenWidth:screen.width});try{if(navigator.sendBeacon){navigator.sendBeacon('/api/visitors/heartbeat',new Blob([p],{type:'application/json'}));}else{fetch('/api/visitors/heartbeat',{method:'POST',headers:{'Content-Type':'application/json'},body:p,keepalive:true}).catch(function(){});}}catch(e){}}hb();setInterval(hb,15000);window.addEventListener('beforeunload',hb);var lp=location.pathname;setInterval(function(){if(location.pathname!==lp){lp=location.pathname;hb();}},1000);})();
+    </script>
+  </body>
+</html>
+
